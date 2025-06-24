@@ -1,0 +1,18 @@
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.search-bar {
+  width: 350px;
+}
+
+.table-container {
+  flex-grow: 1;
+}
+
+.table-header-cell {
+  font-weight: bold;
+}
