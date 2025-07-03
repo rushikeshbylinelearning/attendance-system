@@ -1,79 +1,114 @@
-// in frontend/src/components/MyAssetsTable.jsx
-import React, { useState, useEffect } from 'react';
+// src/components/MyAssetsTable.jsx
+
+import React, { useEffect, useState } from 'react';
 import api from '@/services/api';
-import { Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Box } from '@mui/material';
-import ComputerIcon from '@mui/icons-material/Computer';
+import {
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  Chip,
+  Alert
+} from '@mui/material';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
-const MyAssetsTable = () => {
-    const [myAssets, setMyAssets] = useState([]);
-    const [loading, setLoading] = useState(true);
+// Helper to map status to colors
+const getStatusColor = (status) => {
+  const safeStatus = status?.toLowerCase() || '';
+  if (safeStatus.includes('in use')) return 'success';
+  if (safeStatus.includes('in repair')) return 'warning';
+  if (safeStatus.includes('decommissioned') || safeStatus.includes('returned')) return 'error';
+  return 'default';
+};
 
-    useEffect(() => {
-        // ... fetch logic ...
-        const fetchMyAssets = async () => {
-            try {
-                const response = await api.get('/assets/my');
-                setMyAssets(response.data);
-            } catch (error) { console.error("Failed to fetch my assets:", error); }
-            finally { setLoading(false); }
-        };
-        fetchMyAssets();
-    }, []);
+const MyAssetsTable = ({ userName }) => {
+  const [allocations, setAllocations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}><CircularProgress /></Box>;
+  useEffect(() => {
+    const fetchAllocations = async () => {
+      setLoading(true);
+      try {
+        let response;
+        if (userName) {
+          response = await api.get(`/allocations?userName=${encodeURIComponent(userName)}`);
+        } else {
+          response = await api.get('/allocations/my-assets');
+        }
 
+        setAllocations(response.data || []);
+      } catch (err) {
+        console.error('Failed to load allocations:', err);
+        setError('Failed to load your assigned assets.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllocations();
+  }, [userName]);
+
+  if (loading) {
     return (
-        // --- THE FIX ---
-        <Paper elevation={3} sx={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box
-                sx={{
-                    p: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: 'white',
-                    background: 'linear-gradient(45deg, #673ab7 30%, #9c27b0 90%)',
-                    borderTopLeftRadius: (theme) => theme.shape.borderRadius,
-                    borderTopRightRadius: (theme) => theme.shape.borderRadius,
-                }}
-            >
-                <ComputerIcon sx={{ mr: 1.5 }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>My Assigned Assets</Typography>
-            </Box>
-            
-            {/* flexGrow: 1 tells this container to take up all available vertical space */}
-            <TableContainer sx={{ flexGrow: 1 }}> 
-                <Table stickyHeader>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Component / Asset Name</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Model / Serial Number</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {myAssets.length > 0 ? (
-                            myAssets.map((asset) => (
-                                <TableRow key={asset._id} hover>
-                                    <TableCell>{asset.assetName}</TableCell>
-                                    <TableCell>{asset.assetType}</TableCell>
-                                    <TableCell>{asset.serialNumber}</TableCell>
-                                    <TableCell>{asset.status}</TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
-                                    <Typography variant="h6" color="text.secondary">All Clear!</Typography>
-                                    <Typography color="text.secondary">You don't have any assets assigned to you right now.</Typography>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Paper>
+      <Box display="flex" justifyContent="center" alignItems="center" sx={{ p: 4 }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading Assigned Assets...</Typography>
+      </Box>
     );
+  }
+
+  if (error) {
+    return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
+  }
+
+  if (allocations.length === 0) {
+    return (
+      <Paper sx={{ textAlign: 'center', p: 4, mt: 2, backgroundColor: '#fafafa', border: '1px dashed #ccc' }} elevation={0}>
+        <CheckCircleOutlineIcon sx={{ fontSize: 48, color: 'grey.500', mb: 1 }} />
+        <Typography variant="h6">No Assets Assigned</Typography>
+        <Typography color="text.secondary">No equipment has been assigned.</Typography>
+      </Paper>
+    );
+  }
+
+  const excludedFields = ['_id', '__v'];
+  const headers = Object.keys(allocations[0]).filter(key => !excludedFields.includes(key));
+
+  return (
+    <TableContainer component={Paper} sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: 2 }}>
+      <Table>
+        <TableHead>
+          <TableRow sx={{ '& .MuiTableCell-head': { backgroundColor: 'primary.main', color: 'white', fontWeight: 'bold' } }}>
+            {headers.map((header) => (
+              <TableCell key={header}>{header.replace(/_/g, ' ')}</TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {allocations.map((row, idx) => (
+            <TableRow key={idx} hover>
+              {headers.map((field) => (
+                <TableCell key={field}>
+                  {field.toLowerCase() === 'status' ? (
+                    <Chip label={row[field] || 'Unknown'} color={getStatusColor(row[field])} size="small" />
+                  ) : (
+                    row[field] || '—'
+                  )}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
 };
 
 export default MyAssetsTable;

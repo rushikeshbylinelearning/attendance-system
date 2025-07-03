@@ -1,5 +1,6 @@
 import React from 'react';
 import { Paper, Box, Typography } from '@mui/material';
+import { useNotifications } from '@/hooks/useNotifications';
 
 /**
  * A master layout component for all pages.

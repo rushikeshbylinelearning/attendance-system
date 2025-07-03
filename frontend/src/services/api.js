@@ -1,49 +1,62 @@
 import axios from 'axios';
 
-// 1. Create a new Axios instance
-const api = axios.create({
-  baseURL: 'http://localhost:5001/api', // Your backend URL
-});
+// // 1. Create a new Axios instance
+ const api = axios.create({
+   baseURL: 'https://itmanagement.bylinelms.com/api' , // Your backend URL
+ });
+
+// const api = axios.create({
+//   baseURL: 'http://localhost:5001/api' // <-- CORRECTED FOR LOCAL DEVELOPMENT
+// });
+
 
 // 2. Set up the request interceptor
-// This function will be called before every request is sent
 api.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('token');
     if (token) {
-      // If a token exists, add it to the Authorization header
       config.headers.Authorization = `Bearer ${token}`;
     }
-    return config; // Return the modified config
+    return config;
   },
   (error) => {
-    // Handle request setup errors
     return Promise.reject(error);
   }
 );
 
-// 3. (Optional but Recommended) Set up a response interceptor
-// This function will be called for every response that comes back
+
 api.interceptors.response.use(
   (response) => {
-    // Any status code that lie within the range of 2xx cause this function to trigger
     return response;
   },
   (error) => {
-    // Any status codes that falls outside the range of 2xx cause this function to trigger
-    // Specifically check for 401 Unauthorized
     if (error.response && error.response.status === 401) {
-      // This means the token is invalid or expired
       console.error("Authentication Error: Token is invalid or expired.");
-      // Clear the invalid token from storage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Redirect the user to the login page
-      // Use window.location instead of useNavigate to avoid circular dependencies
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
+
+// --- USER MANAGEMENT FUNCTIONS ---
+
+export const addUser = (userData) => api.post('/users', userData);
+
+export const deleteUser = (userId) => api.delete(`/users/${userId}`);
+
+// --- THIS IS THE CRUCIAL LINE THAT IS MISSING FROM YOUR FILE ---
+// It makes the 'updateUser' function available for other files to import.
+export const updateUser = (userId, updateData) => {
+  return api.put(`/users/${userId}`, updateData);
+};
+
+
+// Your existing function can remain.
+export const updateUserRole = (userId, role) => api.put(`/users/${userId}/role`, { role });
+
 
 export default api;

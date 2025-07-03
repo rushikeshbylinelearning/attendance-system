@@ -2,17 +2,19 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import PrivateRoute from './components/PrivateRoute'; 
 
 // --- IMPORT ALL YOUR PAGES AND COMPONENTS ---
 import Layout from '@/components/Layout';
-import GenericLoginPage from '@/pages/GenericLoginPage';
+import LoginUnified from './pages/LoginUnified'; // Correct the path based on your project structure
 import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
 import InventoryPage from '@/pages/InventoryPage';
 import AllocationPage from '@/pages/AllocationPage'; // <-- Make sure this is imported
 import TicketListPage from '@/pages/TicketListPage';
 import UserListPage from '@/pages/UserListPage';
-import LoginPortal from '@/pages/LoginPortal';
+import MyAssetGridPage from '@/pages/MyAssetGridPage';
+import ManageComponentTypes from './pages/ManageComponentTypes';
 
 // The theme definition...
 const theme = createTheme({ /* ... your theme styles ... */ });
@@ -34,22 +36,18 @@ function App() {
             <Router>
                 <Routes>
                     {/* Public Routes */}
-                    <Route path="/login" element={<LoginPortal />} />
-                    <Route path="/login/admin" element={<GenericLoginPage loginType="admin" />} />
-                    <Route path="/login/employee" element={<GenericLoginPage loginType="employee" />} />
-                    <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/login" element={<LoginUnified />} />
+                  <Route path="/register" element={<RegisterPage />} />
                     
                     {/* Protected Routes inside the Layout */}
                     <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                         <Route path="/dashboard" element={<DashboardPage />} />
                         <Route path="/inventory" element={<InventoryPage />} />
-                        
-                        {/* --- THE FIX IS HERE --- */}
+                        <Route path="/my-assets" element={<MyAssetGridPage />} /> 
                         <Route path="/allocations" element={<AllocationPage />} /> 
-
                         <Route path="/tickets" element={<TicketListPage />} />
                         <Route path="/users" element={<UserListPage />} />
-                        
+                        <Route path="/admin/manage-data" element={<PrivateRoute><ManageComponentTypes /></PrivateRoute>} />
                         {/* Default route for logged-in users */}
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     </Route>

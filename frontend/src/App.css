@@ -1,42 +1,208 @@
+/* ==========================================================================
+   APP.CSS - GLOBAL STYLES & APPLICATION LAYOUT
+   This file establishes the foundational look, feel, and structure
+   for the entire application.
+   ========================================================================== */
+
+/* ===== GLOBAL STYLES & ROOT CONTAINER ===== */
+
+:root {
+  /* Define the sidebar width as a global variable.
+     This is the key to making layouts aware of the sidebar.
+     You can override this on your specific sidebar component if needed. */
+  --sidebar-width: 15rem; /* 240px */
+}
+
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  width: 100%;
+  min-height: 100vh;
+  /* The background is set on the root to cover the entire viewport */
+  background: linear-gradient(135deg, var(--neutral-50) 0%, var(--neutral-100) 100%);
+  position: relative;
+  overflow-x: hidden;
+}
+
+#root::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 20% 80%, var(--primary-100) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, var(--secondary-100) 0%, transparent 40%);
+  opacity: 0.5;
+  z-index: -1;
+  animation: backgroundShift 25s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes backgroundShift {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  100% {
+    transform: scale(1.1) rotate(2deg);
+  }
+}
+
+/* ===== CORE APPLICATION LAYOUT ===== */
+/* This is the main flex container for the Sidebar + Main Content layout */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* ===== MAIN CONTENT AREA ===== */
+/* This container holds all the page content to the right of the sidebar */
+.main-content-area {
+  flex-grow: 1;
+  /* Allow this area to scroll independently */
+  overflow-y: auto;
+  /*
+    The width is calculated to fill the space left by the sidebar.
+    This is essential for positioning content within this area correctly.
+  */
+  width: calc(100% - var(--sidebar-width));
+  display: flex;
+  flex-direction: column;
+}
+
+/* This is the direct wrapper for page components, providing padding. */
+.page-content-wrapper {
+  padding: var(--spacing-8);
+  width: 100%;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+/* ===== PAGE TRANSITIONS (for React Transition Group) ===== */
+/* These classes control the fade-and-slide animation between pages. */
+
+.page-enter {
+  opacity: 0;
+  transform: translateY(2rem);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+.page-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+.page-exit-active {
+  opacity: 0;
+  transform: translateY(-2rem);
+  transition: opacity 300ms ease-in, transform 300ms ease-in;
+}
+
+
+/* ===== GLOBAL UTILITY CLASSES ===== */
+
+/* --- Loading States --- */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-16);
+  width: 100%;
+  flex-grow: 1;
+}
+
+.loading-spinner {
+  width: 2.5rem; /* 40px */
+  height: 2.5rem; /* 40px */
+  border: 0.25rem solid var(--neutral-200); /* 4px */
+  border-top-color: var(--primary-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* src/styles/global.css or App.css */
+
+.page-title {
+  font-size: 3rem; /* Increase as needed */
+  font-weight: 800;
+  color: #1f2937; /* Tailwind: slate-800 */
   text-align: center;
+  margin: 40px 0 20px 0;
+  line-height: 1.2;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* --- Feedback States (Error / Success) --- */
+.feedback-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-8);
+  text-align: center;
+  background: white;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--neutral-200);
+  margin-top: var(--spacing-8);
+}
+
+.feedback-container.error {
+  border-color: var(--error-200);
+}
+.feedback-container.success {
+  border-color: var(--success-200);
+}
+
+.feedback-icon {
+  font-size: var(--font-size-4xl);
+  margin-bottom: var(--spacing-4);
+}
+.feedback-icon.error { color: var(--error-600); }
+.feedback-icon.success { color: var(--success-600); }
+
+.feedback-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-2);
+}
+
+.feedback-message {
+  color: var(--neutral-600);
+  max-width: 40ch;
+}
+
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+
+@media (max-width: 48rem) { /* 768px */
+  .app-layout {
+    flex-direction: column;
   }
-  to {
-    transform: rotate(360deg);
+  .main-content-area {
+    width: 100%;
+    /* Reset sidebar-related spacing for mobile */
+    margin-left: 0;
+  }
+  .page-content-wrapper {
+    padding: var(--spacing-4);
+  }
+  #root::before {
+    background: radial-gradient(circle at 50% 80%, var(--primary-100) 0%, transparent 70%);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@media (max-width: 30rem) { /* 480px */
+  .page-content-wrapper {
+    padding: var(--spacing-4) var(--spacing-2);
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
