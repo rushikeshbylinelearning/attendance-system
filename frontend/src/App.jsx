@@ -10,11 +10,16 @@ import LoginUnified from './pages/LoginUnified'; // Correct the path based on yo
 import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
 import InventoryPage from '@/pages/InventoryPage';
-import AllocationPage from '@/pages/AllocationPage'; // <-- Make sure this is imported
+import AllocationPage from '@/pages/AllocationPage';
 import TicketListPage from '@/pages/TicketListPage';
 import UserListPage from '@/pages/UserListPage';
 import MyAssetGridPage from '@/pages/MyAssetGridPage';
 import ManageComponentTypes from './pages/ManageComponentTypes';
+// ✅ ADDED: Import for the new Robotics Inventory page
+// import Employees from './pages/hr/Employees';
+import RoboticsInventoryPage from './pages/RoboticsInventoryPage';
+import InquiryListPage from './pages/InquiryListPage';
+import { HRDashboardPage, HRInventoryPage } from './pages/hr';
 
 // The theme definition...
 const theme = createTheme({ /* ... your theme styles ... */ });
@@ -43,12 +48,18 @@ function App() {
                     <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                         <Route path="/dashboard" element={<DashboardPage />} />
                         <Route path="/inventory" element={<InventoryPage />} />
+                        {/* ✅ ADDED: Route for the new Robotics Inventory page */}
+                        <Route path="/robotics-inventory" element={<RoboticsInventoryPage />} />
                         <Route path="/my-assets" element={<MyAssetGridPage />} /> 
                         <Route path="/allocations" element={<AllocationPage />} /> 
                         <Route path="/tickets" element={<TicketListPage />} />
                         <Route path="/users" element={<UserListPage />} />
                         <Route path="/admin/manage-data" element={<PrivateRoute><ManageComponentTypes /></PrivateRoute>} />
+                        <Route path="/inquiries" element={<InquiryListPage />} />
+                        <Route path="/hr" element={<HRDashboardPage />} />
+                        <Route path="/hr/inventory" element={<HRInventoryPage />} />
                         {/* Default route for logged-in users */}
+                        
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     </Route>
                 </Routes>

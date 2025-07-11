@@ -8,7 +8,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-8);
+  padding: 01rem;
   background: linear-gradient(135deg, var(--neutral-50) 0%, var(--primary-50) 50%, var(--secondary-50) 100%);
   position: relative;
   overflow: hidden;

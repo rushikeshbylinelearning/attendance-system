@@ -308,3 +308,70 @@
 .warranty-status-badge.expiring-soon { background-color: var(--warning-100); color: var(--warning-700); }
 .warranty-status-badge.expired { background-color: var(--error-100); color: var(--error-700); }
 .warranty-status-badge.default { background-color: var(--neutral-200); color: var(--neutral-700); }
+.filterable-header {
+  cursor: pointer;
+  user-select: none; /* Prevents text selection on click */
+}
+
+.filterable-header:hover {
+  background-color: #f5f5f5; /* A subtle hover effect */
+}
+/* In src/styles/InventoryPage.css */
+
+.inventory-row {
+  cursor: pointer; /* Indicates that the row is clickable */
+  transition: background-color 0.2s ease-in-out;
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10+ and Edge */
+  user-select: none; /* Standard syntax */
+}
+
+.inventory-row:hover {
+  background-color: #f5f5f5; /* Or your theme's hover color */
+}
+
+.inventory-row.selected {
+  background-color: #e3f2fd; /* A light blue to indicate selection */
+  font-weight: 500;
+}
+
+.inventory-row.selected:hover {
+  background-color: #dcf0fe; /* A slightly darker blue on hover for selected rows */
+}
+
+/* Make sure action buttons are still clickable inside the row and don't trigger row click */
+.inventory-row .actions-cell {
+    cursor: auto;
+}
+/* In src/styles/InventoryPage.css */
+
+.inventory-row {
+  /* Makes the entire row act like a button */
+  cursor: pointer; 
+  transition: background-color 0.2s ease-in-out;
+  
+  /* Prevents text selection when clicking/dragging on rows */
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10+ and Edge */
+  user-select: none; /* Standard syntax */
+}
+
+.inventory-row:hover {
+  background-color: #f5f5f5; /* Or your theme's hover color */
+}
+
+.inventory-row.selected {
+  /* A light blue to visually indicate selection */
+  background-color: #e3f2fd; 
+  font-weight: 500;
+}
+
+.inventory-row.selected:hover {
+  /* A slightly darker blue on hover for already selected rows */
+  background-color: #dcf0fe; 
+}
+
+/* IMPORTANT: This ensures that clicking the Edit/Delete buttons does NOT trigger the row click. */
+.inventory-row .actions-cell {
+    cursor: auto;
+}

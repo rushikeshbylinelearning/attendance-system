@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
+import { createInquiry } from '@/services/api';
 import '../styles/TicketForm.css';
 import {
   X, Upload, AlertCircle, CheckCircle, Loader,
@@ -18,6 +19,7 @@ const componentIssues = {
 };
 
 const initialFormData = { component: '', issue: '', description: '', priority: 'Medium', status: 'Open', screenshotFile: null };
+const initialInquiryData = { type: '', description: '', urgency: 'Medium' };
 
 function TicketForm({ open, handleClose, ticket, onSave }) {
   const [formData, setFormData] = useState(initialFormData);
@@ -27,6 +29,9 @@ function TicketForm({ open, handleClose, ticket, onSave }) {
   const [success, setSuccess] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [mode, setMode] = useState('ticket'); // 'ticket' or 'inquiry'
+  const [inquiryData, setInquiryData] = useState(initialInquiryData);
+  const [inquirySuccess, setInquirySuccess] = useState('');
 
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const isAdminOrTech = user.role === 'admin' || user.role === 'technician';
@@ -40,6 +45,9 @@ function TicketForm({ open, handleClose, ticket, onSave }) {
       setExistingScreenshotUrl('');
     }
     setError(''); setSuccess('');
+    setMode('ticket');
+    setInquiryData(initialInquiryData);
+    setInquirySuccess('');
   }, [ticket, open]);
 
   const displayUrl = useMemo(() => {
@@ -86,6 +94,47 @@ function TicketForm({ open, handleClose, ticket, onSave }) {
     finally { setLoading(false); }
   };
   
+  const handleInquiryInputChange = (e) => {
+    const { name, value } = e.target;
+    setInquiryData(prev => ({ ...prev, [name]: value }));
+  };
+  const handleInquirySubmit = async (e) => {
+    e.preventDefault();
+    console.log('InquiryData before validation:', inquiryData);
+    if (!inquiryData.type || !inquiryData.description) {
+      setError('Please fill out all required fields: Type and Description.');
+      return;
+    }
+    if (!["Hardware", "Software"].includes(inquiryData.type)) {
+      setError('Type must be Hardware or Software.');
+      return;
+    }
+    if (!["Low", "Medium", "High", "Critical"].includes(inquiryData.urgency)) {
+      setError('Urgency must be Low, Medium, High, or Critical.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setInquirySuccess('');
+    console.log('Submitting inquiry:', inquiryData);
+    try {
+      await createInquiry(inquiryData);
+      setInquirySuccess('Requirement inquiry submitted successfully!');
+      setTimeout(() => {
+        setInquirySuccess('');
+        setInquiryData(initialInquiryData);
+        setMode('ticket');
+        onSave();
+        handleClose();
+      }, 1500);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to submit inquiry. Please try again.');
+      console.error('Inquiry submission error:', err.response?.data || err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -94,66 +143,112 @@ function TicketForm({ open, handleClose, ticket, onSave }) {
         <div className="ticket-form-container">
           <header className="ticket-form-header">
             <div className="form-title-section">
-              <h2 className="form-title">{ticket ? 'Edit Ticket' : 'Create New Ticket'}</h2>
-              <p className="form-subtitle">Fill out the details below to submit a request.</p>
+              <div className="form-toggle-row">
+                <button
+                  className={`form-toggle-btn${mode === 'ticket' ? ' active' : ''}`}
+                  onClick={() => setMode('ticket')}
+                  type="button"
+                >Raise Ticket</button>
+                <button
+                  className={`form-toggle-btn${mode === 'inquiry' ? ' active' : ''}`}
+                  onClick={() => setMode('inquiry')}
+                  type="button"
+                >Requirement Inquiry</button>
+              </div>
+              <h2 className="form-title">{mode === 'ticket' ? (ticket ? 'Edit Ticket' : 'Create New Ticket') : 'Raise Requirement Inquiry'}</h2>
+              <p className="form-subtitle">{mode === 'ticket' ? 'Fill out the details below to submit a request.' : 'Request new hardware or software for your work needs.'}</p>
             </div>
             <button onClick={handleClose} className="form-close-btn" aria-label="Close form"><X /></button>
           </header>
 
-          <form onSubmit={handleSubmit} className="ticket-form" noValidate>
-            <div className="form-grid">
-              <div className="form-group"><label className="form-label"><Tag /> Component *</label><select name="component" value={formData.component} onChange={handleInputChange} className="form-select" required><option value="">Select Component...</option>{Object.keys(componentIssues).map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-              <div className="form-group"><label className="form-label"><AlertTriangle /> Issue *</label><select name="issue" value={formData.issue} onChange={handleInputChange} className="form-select" required disabled={!formData.component}><option value="">Select Issue...</option>{(componentIssues[formData.component] || []).map(issue => <option key={issue} value={issue}>{issue}</option>)}</select></div>
-              <div className="form-group full-width"><label className="form-label"><AlertCircle /> Priority *</label><select name="priority" value={formData.priority} onChange={handleInputChange} className="form-select" required><option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option><option value="Critical">Critical</option></select></div>
-              {isAdminOrTech && ticket && (<div className="form-group full-width"><label className="form-label"><CheckCircle /> Status</label><select name="status" value={formData.status} onChange={handleInputChange} className="form-select"><option value="Open">Open</option><option value="In Progress">In Progress</option><option value="Resolved">Resolved</option><option value="Closed">Closed</option></select></div>)}
-            </div>
+          {mode === 'ticket' ? (
+            <form onSubmit={handleSubmit} className="ticket-form" noValidate>
+              <div className="form-grid">
+                <div className="form-group"><label className="form-label"><Tag /> Component *</label><select name="component" value={formData.component} onChange={handleInputChange} className="form-select" required><option value="">Select Component...</option>{Object.keys(componentIssues).map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+                <div className="form-group"><label className="form-label"><AlertTriangle /> Issue *</label><select name="issue" value={formData.issue} onChange={handleInputChange} className="form-select" required disabled={!formData.component}><option value="">Select Issue...</option>{(componentIssues[formData.component] || []).map(issue => <option key={issue} value={issue}>{issue}</option>)}</select></div>
+                <div className="form-group full-width"><label className="form-label"><AlertCircle /> Priority *</label><select name="priority" value={formData.priority} onChange={handleInputChange} className="form-select" required><option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option><option value="Critical">Critical</option></select></div>
+                {isAdminOrTech && ticket && (<div className="form-group full-width"><label className="form-label"><CheckCircle /> Status</label><select name="status" value={formData.status} onChange={handleInputChange} className="form-select"><option value="Open">Open</option><option value="In Progress">In Progress</option><option value="Resolved">Resolved</option><option value="Closed">Closed</option></select></div>)}
+              </div>
 
-            <div className="form-group full-width"><label className="form-label"><FileText /> Description *</label><textarea name="description" value={formData.description} onChange={handleInputChange} className="form-textarea" rows={4} required placeholder="Please provide as much detail as possible..." /></div>
-            
-            {/* ======================= CONDITIONAL SCREENSHOT SECTION ======================= */}
-            <div className="form-group full-width">
-              {/* If user is Admin/Tech AND is editing a ticket... */}
-              {isAdminOrTech && ticket ? (
-                // ...and that ticket HAS a screenshot, show the read-only preview.
-                ticket.screenshot && (
+              <div className="form-group full-width"><label className="form-label"><FileText /> Description *</label><textarea name="description" value={formData.description} onChange={handleInputChange} className="form-textarea" rows={4} required placeholder="Please provide as much detail as possible..." /></div>
+              
+              {/* ======================= CONDITIONAL SCREENSHOT SECTION ======================= */}
+              <div className="form-group full-width">
+                {/* If user is Admin/Tech AND is editing a ticket... */}
+                {isAdminOrTech && ticket ? (
+                  // ...and that ticket HAS a screenshot, show the read-only preview.
+                  ticket.screenshot && (
+                    <>
+                      <label className="form-label"><Image /> Attached Screenshot</label>
+                      <div className="file-preview-readonly">
+                        <img src={displayUrl} alt="Attached screenshot" onClick={() => setIsImageModalOpen(true)} />
+                      </div>
+                    </>
+                  )
+                  // If the ticket has NO screenshot, this part renders nothing, effectively hiding it.
+                ) : (
+                  // ELSE (if it's a new ticket for any user), show the full uploader.
                   <>
-                    <label className="form-label"><Image /> Attached Screenshot</label>
-                    <div className="file-preview-readonly">
-                      <img src={displayUrl} alt="Attached screenshot" onClick={() => setIsImageModalOpen(true)} />
+                    <label className="form-label"><Image /> Screenshot (Optional)</label>
+                    <div className={`file-upload-area ${dragActive ? 'drag-active' : ''}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
+                      <div className="upload-placeholder">
+                        <Upload />
+                        <p className="upload-text">Drop image here or <span>browse</span></p>
+                        <p className="upload-hint">PNG, JPG up to 5MB</p>
+                        <div className="file-input-wrapper">
+                          <label htmlFor="file-input-id" className="file-input-button">Choose File</label>
+                          <span className="file-input-status">
+                            {formData.screenshotFile ? formData.screenshotFile.name : 'No file chosen'}
+                          </span>
+                        </div>
+                        <input id="file-input-id" type="file" accept="image/*" onChange={(e) => handleFileChange(e.target.files[0])} className="file-input-hidden" />
+                      </div>
                     </div>
                   </>
-                )
-                // If the ticket has NO screenshot, this part renders nothing, effectively hiding it.
-              ) : (
-                // ELSE (if it's a new ticket for any user), show the full uploader.
-                <>
-                  <label className="form-label"><Image /> Screenshot (Optional)</label>
-                  <div className={`file-upload-area ${dragActive ? 'drag-active' : ''}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
-                    <div className="upload-placeholder">
-                      <Upload />
-                      <p className="upload-text">Drop image here or <span>browse</span></p>
-                      <p className="upload-hint">PNG, JPG up to 5MB</p>
-                      <div className="file-input-wrapper">
-                        <label htmlFor="file-input-id" className="file-input-button">Choose File</label>
-                        <span className="file-input-status">
-                          {formData.screenshotFile ? formData.screenshotFile.name : 'No file chosen'}
-                        </span>
-                      </div>
-                      <input id="file-input-id" type="file" accept="image/*" onChange={(e) => handleFileChange(e.target.files[0])} className="file-input-hidden" />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-            {/* ======================= END OF CONDITIONAL SECTION ======================= */}
+                )}
+              </div>
+              {/* ======================= END OF CONDITIONAL SECTION ======================= */}
 
-            <div className="form-actions">
-              <button type="button" onClick={handleClose} className="form-btn secondary" disabled={loading}>Cancel</button>
-              <button type="submit" className="form-btn primary" disabled={loading || success}>
-                {loading ? <Loader className="animate-spin" /> : (ticket ? 'Update Ticket' : 'Create Ticket')}
-              </button>
-            </div>
-          </form>
+              <div className="form-actions">
+                <button type="button" onClick={handleClose} className="form-btn secondary" disabled={loading}>Cancel</button>
+                <button type="submit" className="form-btn primary" disabled={loading || success}>
+                  {loading ? <Loader className="animate-spin" /> : (ticket ? 'Update Ticket' : 'Create Ticket')}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleInquirySubmit} className="ticket-form" noValidate>
+              <div className="form-group full-width">
+                <label className="form-label">Requirement Type *</label>
+                <select name="type" value={inquiryData.type} onChange={handleInquiryInputChange} className="form-select" required>
+                  <option value="">Select Type...</option>
+                  <option value="Hardware">Hardware</option>
+                  <option value="Software">Software</option>
+                </select>
+              </div>
+              <div className="form-group full-width">
+                <label className="form-label">Urgency *</label>
+                <select name="urgency" value={inquiryData.urgency} onChange={handleInquiryInputChange} className="form-select" required>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+              <div className="form-group full-width">
+                <label className="form-label">Description *</label>
+                <textarea name="description" value={inquiryData.description} onChange={handleInquiryInputChange} className="form-textarea" rows={4} required placeholder="Describe your requirement in detail..." />
+              </div>
+              <div className="form-actions">
+                <button type="button" onClick={handleClose} className="form-btn secondary" disabled={inquirySuccess}>Cancel</button>
+                <button type="submit" className="form-btn primary" disabled={inquirySuccess}>Submit Inquiry</button>
+              </div>
+              {inquirySuccess && <div className="form-success-message">{inquirySuccess}</div>}
+              {error && <div className="form-error-message">{error}</div>}
+            </form>
+          )}
+          {success && <div className="form-success-message">{success}</div>}
+          {error && !inquirySuccess && <div className="form-error-message">{error}</div>}
         </div>
       </div>
 

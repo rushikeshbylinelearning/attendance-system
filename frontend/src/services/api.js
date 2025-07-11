@@ -1,16 +1,14 @@
 import axios from 'axios';
 
-// // 1. Create a new Axios instance
- const api = axios.create({
-   baseURL: 'https://itmanagement.bylinelms.com/api' , // Your backend URL
- });
+// // // 1. Create a new Axios instance
+//  const api = axios.create({
+//    baseURL: 'https://itmanagement.bylinelms.com/api' , // Your backend URL
+//  });
 
-// const api = axios.create({
-//   baseURL: 'http://localhost:5001/api' // <-- CORRECTED FOR LOCAL DEVELOPMENT
-// });
+const api = axios.create({
+  baseURL: 'http://localhost:5001/api' // <-- CORRECTED FOR LOCAL DEVELOPMENT
+});
 
-
-// 2. Set up the request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('token');
@@ -23,6 +21,7 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
 
 
 api.interceptors.response.use(
@@ -42,21 +41,17 @@ api.interceptors.response.use(
   }
 );
 
-// --- USER MANAGEMENT FUNCTIONS ---
-
 export const addUser = (userData) => api.post('/users', userData);
-
 export const deleteUser = (userId) => api.delete(`/users/${userId}`);
-
-// --- THIS IS THE CRUCIAL LINE THAT IS MISSING FROM YOUR FILE ---
-// It makes the 'updateUser' function available for other files to import.
 export const updateUser = (userId, updateData) => {
   return api.put(`/users/${userId}`, updateData);
 };
-
-
-// Your existing function can remain.
 export const updateUserRole = (userId, role) => api.put(`/users/${userId}/role`, { role });
-
+// --- INQUIRY FUNCTIONS ---
+export const createInquiry = (data) => api.post('/inquiries', data);
+export const getAllInquiries = () => api.get('/inquiries');
+export const getUserInquiries = (userId) => api.get(`/inquiries/user/${userId}`);
+export const updateInquiryStatus = (id, status) => api.patch(`/inquiries/${id}`, { status });
+export const deleteInquiry = (id) => api.delete(`/inquiries/${id}`);
 
 export default api;

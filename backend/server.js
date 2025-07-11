@@ -60,6 +60,8 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/allocations', require('./routes/allocations'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/component-types', require('./routes/componentTypes'));
+app.use('/api/inquiries', require('./routes/inquiries'));
+app.use('/api/hr-inventory', require('./routes/hrInventory'));
 app.use('/uploads', express.static('uploads'));
 
 

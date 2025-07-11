@@ -1,18 +1,16 @@
-// backend/models/User.js
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    // --- NEW FIELDS ---
-    employeeId: { type: String, required: true, unique: true },
-    seatNumber: { type: String, required: true },
-    role: { 
-        type: String, 
-        enum: ['user', 'technician', 'admin'], 
-        default: 'user' 
-    },
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String },
+  employeeId: { type: String, required: true, unique: true }, // ✅ FIXED: use employeeId
+  seatNumber: { type: String },
+  role: {
+    type: String,
+    enum: ['admin', 'user', 'intern', 'employee'],
+    default: 'user'
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

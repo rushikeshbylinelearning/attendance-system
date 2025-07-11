@@ -28,7 +28,7 @@ const getStatusColor = (status) => {
 };
 
 const MyAssetsTable = ({ userName }) => {
-  const [allocations, setAllocations] = useState([]);
+  const [allocation, setAllocation] = useState(null); // single object
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -43,7 +43,7 @@ const MyAssetsTable = ({ userName }) => {
           response = await api.get('/allocations/my-assets');
         }
 
-        setAllocations(response.data || []);
+        setAllocation(response.data || null);
       } catch (err) {
         console.error('Failed to load allocations:', err);
         setError('Failed to load your assigned assets.');
@@ -68,7 +68,7 @@ const MyAssetsTable = ({ userName }) => {
     return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
   }
 
-  if (allocations.length === 0) {
+  if (!allocation || Object.keys(allocation).length === 0) {
     return (
       <Paper sx={{ textAlign: 'center', p: 4, mt: 2, backgroundColor: '#fafafa', border: '1px dashed #ccc' }} elevation={0}>
         <CheckCircleOutlineIcon sx={{ fontSize: 48, color: 'grey.500', mb: 1 }} />
@@ -79,7 +79,7 @@ const MyAssetsTable = ({ userName }) => {
   }
 
   const excludedFields = ['_id', '__v'];
-  const headers = Object.keys(allocations[0]).filter(key => !excludedFields.includes(key));
+  const headers = Object.keys(allocation).filter(key => !excludedFields.includes(key));
 
   return (
     <TableContainer component={Paper} sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: 2 }}>
@@ -92,23 +92,23 @@ const MyAssetsTable = ({ userName }) => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {allocations.map((row, idx) => (
-            <TableRow key={idx} hover>
-              {headers.map((field) => (
-                <TableCell key={field}>
-                  {field.toLowerCase() === 'status' ? (
-                    <Chip label={row[field] || 'Unknown'} color={getStatusColor(row[field])} size="small" />
-                  ) : (
-                    row[field] || '—'
-                  )}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
+          <TableRow>
+            {headers.map((field) => (
+              <TableCell key={field}>
+                {field.toLowerCase() === 'status' ? (
+                  <Chip label={allocation[field] || 'Unknown'} color={getStatusColor(allocation[field])} size="small" />
+                ) : (
+                  allocation[field] || '—'
+                )}
+              </TableCell>
+            ))}
+          </TableRow>
         </TableBody>
       </Table>
     </TableContainer>
   );
 };
+
+
 
 export default MyAssetsTable;
