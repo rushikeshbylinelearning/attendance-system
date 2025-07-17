@@ -1,0 +1,29 @@
+/* frontend/src/pages/css/EmployeeDashboardPage.css */
+
+/* This could be used to style the main container of the dashboard if needed */
+.employee-dashboard-container {
+    /* Example: Add a subtle animation on load */
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* A general-purpose class for our widget-like paper components */
+.dashboard-widget {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    padding: 1rem;
+}
+
+/* Keyframes for the fadeIn animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

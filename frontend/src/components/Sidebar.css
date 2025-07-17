@@ -1,0 +1,99 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 60px;
+  background: #232e56;
+  color: #fff;
+  z-index: 1200;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+  transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.sidebar.open {
+  width: 220px;
+}
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  width: 100%;
+  background: transparent;
+}
+
+.sidebar .MuiDivider-root {
+  background: #3a4371;
+  margin: 0 8px;
+}
+
+.sidebar .MuiList-root {
+  flex: 1 1 auto;
+  padding-top: 8px;
+}
+
+.sidebar-link {
+  min-height: 48px !important;
+  justify-content: center !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  border-radius: 8px;
+  margin: 4px 8px;
+  transition: background 0.2s;
+}
+
+.sidebar.open .sidebar-link {
+  justify-content: flex-start !important;
+  padding-left: 16px !important;
+}
+
+.sidebar-icon {
+  min-width: 0 !important;
+  color: #bfc8e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem !important;
+  margin-right: 0;
+  transition: color 0.2s;
+}
+
+.sidebar-link:hover .sidebar-icon,
+.sidebar-link:focus .sidebar-icon {
+  color: #fff;
+}
+
+.sidebar.open .sidebar-icon {
+  margin-right: 16px;
+}
+
+.sidebar-label {
+  opacity: 1;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: opacity 0.2s;
+}
+
+.sidebar:not(.open) .sidebar-label {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    width: 48px;
+  }
+  .sidebar.open {
+    width: 180px;
+  }
+} 

@@ -1,0 +1,36 @@
+/* frontend/src/components/css/WorkScheduleTimeline.css */
+
+.timeline-container {
+    position: relative;
+    padding-top: 50px; /* Space for the shift bar */
+    margin-top: 1rem;
+}
+
+.timeline-axis {
+    position: absolute;
+    top: 80px; /* Position it vertically */
+    left: 5%; /* Indent from the sides */
+    width: 90%;
+    height: 1px;
+    background-color: #e0e0e0; /* Light gray line */
+    z-index: 1;
+}
+
+.timeline-day-dot {
+    position: absolute;
+    top: -4px; /* Center it on the axis line */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background-color: #e0e0e0; /* Default dot color */
+    z-index: 2;
+}
+
+.timeline-day-dot.is-today {
+    background-color: #1976d2; /* Primary blue for today */
+    width: 11px;
+    height: 11px;
+    top: -5px;
+}

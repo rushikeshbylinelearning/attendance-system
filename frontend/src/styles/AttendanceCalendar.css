@@ -1,0 +1,65 @@
+/* frontend/src/components/css/AttendanceCalendar.css */
+
+.react-calendar {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.125em;
+  padding: 1em;
+}
+
+.react-calendar__tile {
+  text-align: center;
+  padding: 0.75em 0.5em;
+  height: 80px; /* Give tiles some height */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Base tile styles */
+.react-calendar__tile,
+.react-calendar__month-view__days__day {
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease;
+}
+.react-calendar__tile:enabled:hover {
+  background-color: #f0f0f0;
+}
+.react-calendar__tile--now {
+  background: #ffff76 !important;
+  font-weight: bold;
+}
+
+/* Custom Status Styles */
+.react-calendar__tile.present {
+  background-color: #e8f5e9; /* Light Green */
+  color: #2e7d32;
+  font-weight: bold;
+}
+.react-calendar__tile.late {
+  background-color: #fff3e0; /* Light Orange */
+  color: #ef6c00;
+  font-weight: bold;
+}
+.react-calendar__tile.absent {
+  background-color: #ffebee; /* Light Red */
+  color: #c62828;
+}
+.react-calendar__tile.on-leave {
+  background-color: #e3f2fd; /* Light Blue */
+  color: #1565c0;
+}
+.react-calendar__tile.holiday, .react-calendar__tile.weekend {
+  background-color: #f5f5f5; /* Light Gray */
+  color: #757575;
+}
+
+/* Add a class for non-month days */
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: #ccc;
+  background-color: #fff;
+}

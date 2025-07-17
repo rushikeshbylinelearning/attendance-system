@@ -1,0 +1,55 @@
+/* frontend/src/components/css/AttendanceTimeline.css */
+
+/*
+ * This is the container for the entire timeline visual,
+ * holding the bar and all the segments.
+ */
+.timeline-bar-container {
+    position: relative; /* Crucial for positioning the segments inside */
+    width: 100%;
+    height: 6px;
+    background-color: #e9ecef; /* The light gray track background */
+    border-radius: 3px;
+}
+
+/*
+ * This is the style for a green bar representing a work session.
+ * It is positioned absolutely within the timeline-bar-container.
+ */
+.work-segment {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background-color: #28a745; /* Green for work */
+    border-radius: 3px;
+    /* The 'left' and 'width' properties will be set via inline styles in React */
+}
+
+/*
+ * This is the style for a red dot representing a break.
+ * It is also positioned absolutely.
+ */
+.break-segment {
+    position: absolute;
+    top: -3px; /* Pop it out slightly above/below the bar's center */
+    height: 12px;
+    width: 12px;
+    background-color: #dc3545; /* Red for break */
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); /* Add a subtle shadow for visibility */
+    transform: translateX(-50%); /* Center the dot on its 'left' position */
+    /* The 'left' property will be set via inline styles in React */
+}
+
+/* 
+ * The following old styles are NO LONGER NEEDED and should be deleted
+ * as they conflict with the absolute positioning strategy above.
+ * - .timeline-grid
+ * - .timeline-bar
+ * - .time-slot
+ * - .time-slot.work
+ * - .time-slot.break
+ * - .time-slot.absent
+ * - .time-slot.weekend
+ */
