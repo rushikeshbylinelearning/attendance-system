@@ -1,19 +1,16 @@
 // frontend/src/components/WeeklyTimeCards.jsx
-
 import React, { useMemo } from 'react';
-import { Box, Paper, Typography, Grid, Avatar } from '@mui/material';
+import { Typography, Avatar } from '@mui/material';
 import ScheduleIcon from '@mui/icons-material/Schedule';
-import '../styles/WorkSchedule.css'; // Import the corresponding CSS file
+import '../styles/WorkSchedule.css';
 
-// Helper to get the start of the current week (assumes Sunday is the first day)
 const getStartOfWeek = (date) => {
     const d = new Date(date);
-    const day = d.getDay(); // 0 for Sunday, 1 for Monday, etc.
+    const day = d.getDay();
     const diff = d.getDate() - day;
     return new Date(d.setDate(diff));
 };
 
-// Helper to format total work minutes into HH:MM Hrs format
 const formatWorkHours = (minutes) => {
     if (!minutes || minutes <= 0) return '00:00 Hrs';
     const hours = Math.floor(minutes / 60);
@@ -21,41 +18,43 @@ const formatWorkHours = (minutes) => {
     return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} Hrs`;
 };
 
-// Renamed from WeeklyTimeCards to a more descriptive name for clarity
 const WorkSchedule = ({ logs, shift }) => {
-
     const weekData = useMemo(() => {
         const today = new Date();
         const startOfWeek = getStartOfWeek(today);
         const weekDays = [];
-        // Create a Map for efficient lookups of logs by date
-        const logMap = new Map((logs || []).map(log => [log.attendance_date.split('T')[0], log]));
+
+        // FIX: Filter out any logs that are null or don't have a valid attendanceDate before creating the map.
+        const logMap = new Map(
+            (logs || [])
+                .filter(log => log && log.attendanceDate) // This is the safeguard
+                .map(log => [log.attendanceDate.split('T')[0], log])
+        );
 
         for (let i = 0; i < 7; i++) {
             const currentDate = new Date(startOfWeek);
             currentDate.setDate(startOfWeek.getDate() + i);
             const dateString = currentDate.toISOString().split('T')[0];
             const log = logMap.get(dateString);
-
+            
             let status = 'No Data';
             const dayOfWeek = currentDate.getDay();
-
             if (log) {
-                status = log.status; // Status from the log (Present, Late, On Leave)
+                status = log.status;
             } else if (dayOfWeek === 0 || dayOfWeek === 6) {
-                status = 'Weekend'; // It's a weekend with no log
+                status = 'Weekend';
             } else if (currentDate < today) {
-                status = 'Absent'; // It's a past weekday with no log
+                status = 'Absent';
             }
             
-            // Calculate total work time for the day from all sessions
             const totalWorkMinutes = (log?.sessions || []).reduce((acc, session) => {
-                if (session.start_time && session.end_time) {
-                    return acc + (new Date(session.end_time) - new Date(session.start_time));
+                // Use camelCase to match the API response
+                if (session.startTime && session.endTime) {
+                    return acc + (new Date(session.endTime) - new Date(session.startTime));
                 }
                 return acc;
             }, 0) / (1000 * 60);
-
+            
             weekDays.push({
                 date: currentDate,
                 log,
@@ -64,83 +63,58 @@ const WorkSchedule = ({ logs, shift }) => {
             });
         }
         return weekDays;
-    }, [logs]); // Recalculate only when the logs data changes
+    }, [logs]);
 
-    // Color mapping for different statuses
     const statusColors = {
-        Present: 'success.main',
-        Late: 'success.main', // Late is still a form of Present
-        Absent: 'error.main',
-        Weekend: 'warning.main',
-        'On Leave': 'info.main',
-        'No Data': 'text.secondary'
+        Present: '#22c55e',
+        Late: '#22c55e',
+        Absent: '#ef4444',
+        Weekend: '#f59e42',
+        'On Leave': '#3b82f6',
+        'No Data': '#6b7280'
     };
-
-    const startOfWeekFormatted = weekData[0]?.date.toLocaleDateString('en-CA').replace(/-/g, '-');
-    const endOfWeekFormatted = weekData[6]?.date.toLocaleDateString('en-CA').replace(/-/g, '-');
+    
+    const startOfWeekFormatted = weekData[0]?.date.toLocaleDateString('en-CA');
+    const endOfWeekFormatted = weekData[6]?.date.toLocaleDateString('en-CA');
     const todayDateString = new Date().toISOString().split('T')[0];
 
     return (
-        <Paper sx={{ p: 3, mt: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Avatar sx={{ bgcolor: 'primary.light', mr: 2 }}><ScheduleIcon sx={{color: 'primary.main'}}/></Avatar>
-                <Box>
+        <div className="card" style={{ padding: 24, marginTop: 24 }}>
+            <div className="flex gap-16" style={{ alignItems: 'center', marginBottom: 8 }}>
+                <Avatar style={{ background: '#e3eafe', marginRight: 16 }}><ScheduleIcon style={{ color: '#2563eb' }} /></Avatar>
+                <div>
                     <Typography variant="h6">Work Schedule</Typography>
-                    <Typography variant="body2" color="text.secondary">{startOfWeekFormatted} - {endOfWeekFormatted}</Typography>
-                </Box>
-            </Box>
-
-            <div className="timeline-container">
-                {/* The blue bar representing the shift */}
-                <Box sx={{
-                    position: 'absolute', top: 0, left: '5%', width: '90%',
-                    bgcolor: '#e3f2fd', p: 1, borderRadius: 1, zIndex: 5,
-                    borderLeft: '4px solid', borderColor: 'primary.main'
-                }}>
-                    <Typography variant="body2" sx={{fontWeight: 'bold'}}>
-                        {shift?.name || 'Morning Shift'}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {shift?.startTime} - {shift?.endTime}
-                    </Typography>
-                </Box>
-                
-                {/* The gray horizontal line */}
+                    <Typography variant="body2" className="text-muted">{startOfWeekFormatted} - {endOfWeekFormatted}</Typography>
+                </div>
+            </div>
+            <div className="timeline-container" style={{ position: 'relative', marginTop: 16 }}>
+                <div style={{ position: 'absolute', top: 0, left: '5%', width: '90%', background: '#e3f2fd', padding: 8, borderRadius: 8, zIndex: 5, borderLeft: '4px solid #2563eb' }}>
+                    <Typography variant="body2" style={{ fontWeight: 'bold' }}>{shift?.name || 'Morning Shift'}</Typography>
+                    <Typography variant="caption" className="text-muted">{shift?.startTime} - {shift?.endTime}</Typography>
+                </div>
                 <div className="timeline-axis"></div>
-
-                <Grid container spacing={1} sx={{ position: 'relative', zIndex: 3 }}>
+                <div className="flex gap-16" style={{ position: 'relative', zIndex: 3, marginTop: 48 }}>
                     {weekData.map((day) => {
                         const isToday = day.date.toISOString().split('T')[0] === todayDateString;
                         return (
-                            <Grid item key={day.date} xs sx={{ textAlign: 'center' }}>
-                                <Box sx={{ position: 'relative', pt: 4 }}>
-                                    <div className={`timeline-day-dot ${isToday ? 'is-today' : ''}`}></div>
-                                </Box>
-                                <Typography variant="body2" color="text.secondary">
+                            <div key={day.date.toISOString()} style={{ textAlign: 'center', flex: 1 }}>
+                                <div style={{ position: 'relative', paddingTop: 16 }}>
+                                    <div className={`timeline-day-dot${isToday ? ' is-today' : ''}`}></div>
+                                </div>
+                                <Typography variant="body2" className="text-muted">
                                     {day.date.toLocaleDateString('en-US', { weekday: 'short' })}
-                                    <Box component="span" sx={{
-                                        ml: 0.5,
-                                        p: '2px 6px',
-                                        borderRadius: '50%',
-                                        bgcolor: isToday ? 'primary.main' : 'transparent',
-                                        color: isToday ? 'primary.contrastText' : 'inherit'
-                                    }}>
-                                        {day.date.getDate()}
-                                    </Box>
+                                    <span style={{ marginLeft: 4, padding: '2px 6px', borderRadius: '50%', background: isToday ? '#2563eb' : 'transparent', color: isToday ? '#fff' : 'inherit' }}>{day.date.getDate()}</span>
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: statusColors[day.status] || 'text.secondary', fontWeight: 'bold' }}>
-                                    {day.status}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="body2" style={{ color: statusColors[day.status] || '#6b7280', fontWeight: 'bold' }}>{day.status}</Typography>
+                                <Typography variant="caption" className="text-muted">
                                     {(day.status === 'Present' || day.status === 'Late') ? formatWorkHours(day.totalWorkMinutes) : ''}
                                 </Typography>
-                            </Grid>
+                            </div>
                         );
                     })}
-                </Grid>
+                </div>
             </div>
-        </Paper>
+        </div>
     );
 };
-
-export default WorkSchedule; // Exporting with a more descriptive name
+export default WorkSchedule;

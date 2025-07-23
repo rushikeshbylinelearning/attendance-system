@@ -1,74 +1,54 @@
 // backend/routes/admin.js
 const express = require('express');
-const bcrypt = require('bcrypt');
-const db = require('../db');
-const authenticateToken = require('../middleware/authenticateToken');
 const router = express.Router();
+const mongoose = require('mongoose');
 
-const SALT_ROUNDS = 10;
+// --- Middleware ---
+const authenticateToken = require('../middleware/authenticateToken');
+
+// --- Models ---
+const User = require('../models/User');
+const AttendanceLog = require('../models/AttendanceLog');
+const AttendanceSession = require('../models/AttendanceSession');
 
 // Middleware to check for Admin/HR role
 const isAdminOrHr = (req, res, next) => {
-    if (req.user.role !== 'Admin' && req.user.role !== 'HR') {
+    if (!['Admin', 'HR'].includes(req.user.role)) {
         return res.status(403).json({ error: 'Access forbidden: Requires Admin or HR role.' });
     }
     next();
 };
 
-// GET /api/admin/employees - List all employees for the main table and selectors
-router.get('/employees', [authenticateToken, isAdminOrHr], async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                em.id, em.employee_code, em.full_name, em.email, em.role, 
-                em.designation, em.department, em.joining_date, em.is_active,
-                sm.shift_name, em.shift_group_id
-            FROM employee_master em
-            LEFT JOIN shift_master sm ON em.shift_group_id = sm.id
-            ORDER BY em.full_name;
-        `;
-        const result = await db.query(query);
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Failed to fetch employees:', error);
-        res.status(500).json({ error: 'Failed to fetch employees' });
-    }
-});
+// ===================================
+// DASHBOARD & LOGS
+// ===================================
 
-// GET /api/admin/shifts - Simple list of shifts for the form dropdown
-router.get('/shifts', [authenticateToken, isAdminOrHr], async (req, res) => {
-    try {
-        const result = await db.query('SELECT id, shift_name FROM shift_master ORDER BY shift_name');
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Failed to fetch shifts:', error);
-        res.status(500).json({ error: 'Failed to fetch shifts' });
-    }
-});
-
-// GET /api/admin/dashboard-summary - Fetches live stats for the admin homepage
+// GET /api/admin/dashboard-summary (No changes)
 router.get('/dashboard-summary', [authenticateToken, isAdminOrHr], async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     try {
-        const query = `
-            WITH TodayLogs AS (SELECT employee_id, status FROM attendance_log WHERE attendance_date = $1),
-            WhosIn AS (
-                SELECT em.id, em.full_name, em.designation, s.start_time
-                FROM attendance_sessions s
-                JOIN attendance_log al ON s.attendance_log_id = al.id
-                JOIN employee_master em ON al.employee_id = em.id
-                WHERE al.attendance_date = $1 AND s.end_time IS NULL ORDER BY s.start_time
-            )
-            SELECT
-                (SELECT COUNT(*) FROM employee_master WHERE is_active = TRUE) as total_employees,
-                (SELECT COUNT(*) FROM TodayLogs WHERE status = 'Present' OR status = 'Late') as present_count,
-                (SELECT COUNT(*) FROM TodayLogs WHERE status = 'Late') as late_count,
-                (SELECT COUNT(*) FROM TodayLogs WHERE status = 'On Leave') as on_leave_count,
-                (SELECT json_agg(t) FROM WhosIn t) as whos_in_list
-        `;
-        const result = await db.query(query, [today]);
-        const summary = result.rows[0];
-        if (!summary.whos_in_list) { summary.whos_in_list = []; }
+        const totalEmployeesPromise = User.countDocuments({ isActive: true });
+        const todayLogsPromise = AttendanceLog.find({ attendanceDate: today }).lean();
+        const whosInListPromise = AttendanceSession.aggregate([
+            { $match: { endTime: null } },
+            { $lookup: { from: 'attendancelogs', localField: 'attendanceLog', foreignField: '_id', as: 'logInfo' } },
+            { $unwind: '$logInfo' },
+            { $match: { 'logInfo.attendanceDate': today } },
+            { $lookup: { from: 'users', localField: 'logInfo.user', foreignField: '_id', as: 'userInfo' } },
+            { $unwind: '$userInfo' },
+            { $project: { _id: 0, id: '$userInfo._id', fullName: '$userInfo.fullName', designation: '$userInfo.designation', startTime: '$startTime' } },
+            { $sort: { startTime: 1 } }
+        ]);
+
+        const [totalEmployees, todayLogs, whosInList] = await Promise.all([totalEmployeesPromise, todayLogsPromise, whosInListPromise]);
+        
+        const summary = {
+            totalEmployees: totalEmployees,
+            presentCount: todayLogs.length,
+            lateCount: todayLogs.filter(l => l.status === 'Late').length,
+            onLeaveCount: todayLogs.filter(l => l.status === 'On Leave').length,
+            whosInList: whosInList || []
+        };
         res.json(summary);
     } catch (error) {
         console.error("Error fetching dashboard summary:", error);
@@ -76,101 +56,76 @@ router.get('/dashboard-summary', [authenticateToken, isAdminOrHr], async (req, r
     }
 });
 
-// GET /api/admin/attendance-logs - The robust endpoint for viewing detailed logs
+// GET /api/admin/attendance-logs (No changes)
 router.get('/attendance-logs', [authenticateToken, isAdminOrHr], async (req, res) => {
     const { employeeId, startDate, endDate } = req.query;
     if (!employeeId || !startDate || !endDate) {
         return res.status(400).json({ error: 'Employee ID, start date, and end date are required.' });
     }
     try {
-        const query = `
-            SELECT
-                al.id,
-                al.attendance_date,
-                al.status,
-                json_agg(DISTINCT jsonb_build_object('start_time', ass.start_time, 'end_time', ass.end_time)) FILTER (WHERE ass.id IS NOT NULL) AS sessions,
-                (
-                    SELECT json_agg(b ORDER BY b.start_time)
-                    FROM (
-                        SELECT bl.start_time, bl.end_time, bl.duration_minutes, bl.break_type
-                        FROM break_log bl
-                        WHERE bl.attendance_log_id = al.id
-                    ) b
-                ) AS breaks
-            FROM attendance_log al
-            LEFT JOIN attendance_sessions ass ON al.id = ass.attendance_log_id
-            WHERE al.employee_id = $1 AND al.attendance_date BETWEEN $2 AND $3
-            GROUP BY al.id, al.attendance_date, al.status
-            ORDER BY al.attendance_date DESC;
-        `;
-        const result = await db.query(query, [employeeId, startDate, endDate]);
-        res.json(result.rows);
+        const logs = await AttendanceLog.aggregate([
+            { $match: { user: new mongoose.Types.ObjectId(employeeId), attendanceDate: { $gte: startDate, $lte: endDate } } },
+            { $lookup: { from: 'attendancesessions', localField: '_id', foreignField: 'attendanceLog', as: 'sessions', pipeline: [{ $project: { startTime: 1, endTime: 1, _id: 0 } }] } },
+            { $lookup: { from: 'breaklogs', localField: '_id', foreignField: 'attendanceLog', as: 'breaks', pipeline: [{ $project: { startTime: 1, endTime: 1, durationMinutes: 1, breakType: 1, _id: 0 } }] } },
+            { $addFields: { totalBreakMinutes: { $sum: "$breaks.durationMinutes" } } },
+            { $sort: { attendanceDate: 1 } },
+            { $project: { id: '$_id', _id: 0, attendanceDate: 1, status: 1, sessions: 1, breaks: 1, totalBreakMinutes: 1 } }
+        ]);
+        res.json(logs);
     } catch (error) {
         console.error('Error fetching admin attendance logs:', error);
         res.status(500).json({ error: 'Internal server error while fetching logs.' });
     }
 });
 
-// POST /api/admin/employees - Create a new employee
-router.post('/employees', [authenticateToken, isAdminOrHr], async (req, res) => {
-    const { employee_code, full_name, email, password, role, designation, department, joining_date, shift_group_id } = req.body;
-    if (!employee_code || !full_name || !email || !password) {
-        return res.status(400).json({ error: 'Employee Code, Name, Email, and Password are required.' });
+
+// ** REWRITTEN ENDPOINT FOR BULK EXPORT **
+router.get('/bulk-attendance-logs', [authenticateToken, isAdminOrHr], async (req, res) => {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'A valid date range is required.' });
     }
+
     try {
-        const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
-        const query = `INSERT INTO employee_master (employee_code, full_name, email, password_hash, role, designation, department, joining_date, shift_group_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id;`;
-        const values = [employee_code, full_name, email, password_hash, role, designation, department, joining_date, shift_group_id];
-        await db.query(query, values);
-        res.status(201).json({ message: 'Employee created successfully!' });
+        const logs = await AttendanceLog.aggregate([
+            // 1. Filter logs by date range
+            { $match: { attendanceDate: { $gte: startDate, $lte: endDate } } },
+            
+            // 2. Join with the users collection to get employee details
+            { $lookup: { from: 'users', localField: 'user', foreignField: '_id', as: 'user' } },
+            { $unwind: '$user' }, // Deconstruct the user array to an object
+            
+            // 3. Join with the shifts collection (nested lookup)
+            {
+                $lookup: {
+                    from: 'shifts',
+                    localField: 'user.shiftGroup',
+                    foreignField: '_id',
+                    as: 'user.shiftGroup'
+                }
+            },
+            // Unwind shiftGroup but keep logs for users who have no shift assigned
+            { $unwind: { path: '$user.shiftGroup', preserveNullAndEmptyArrays: true } },
+
+            // 4. Join with sessions
+            { $lookup: { from: 'attendancesessions', localField: '_id', foreignField: 'attendanceLog', as: 'sessions' } },
+            
+            // 5. Join with breaks
+            { $lookup: { from: 'breaklogs', localField: '_id', foreignField: 'attendanceLog', as: 'breaks' } },
+            
+            // 6. Calculate total break time
+            { $addFields: { totalBreakMinutes: { $sum: '$breaks.durationMinutes' } } },
+
+            // 7. Sort the results
+            { $sort: { attendanceDate: 1, 'user.fullName': 1 } }
+        ]);
+
+        res.json(logs);
     } catch (error) {
-        if (error.code === '23505') { return res.status(409).json({ error: 'Employee with this email or code already exists.' });}
-        console.error('Create Employee Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('Bulk log fetch error:', error);
+        res.status(500).json({ error: 'Failed to fetch bulk logs.' });
     }
 });
 
-// PUT /api/admin/employees/:id - Update an existing employee
-router.put('/employees/:id', [authenticateToken, isAdminOrHr], async (req, res) => {
-    const { id } = req.params;
-    const { employee_code, full_name, email, role, designation, department, joining_date, shift_group_id, is_active } = req.body;
-    try {
-        const query = `UPDATE employee_master SET employee_code = $1, full_name = $2, email = $3, role = $4, designation = $5, department = $6, joining_date = $7, shift_group_id = $8, is_active = $9 WHERE id = $10`;
-        const values = [employee_code, full_name, email, role, designation, department, joining_date, shift_group_id, is_active, id];
-        const result = await db.query(query, values);
-        if (result.rowCount === 0) { return res.status(404).json({ error: 'Employee not found.' });}
-        res.json({ message: 'Employee updated successfully.' });
-    } catch (error)
-    {
-        if (error.code === '23505') { return res.status(409).json({ error: 'Employee with this email or code already exists.' });}
-        console.error('Update Employee Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-router.patch('/employees/:id/shift', [authenticateToken, isAdminOrHr], async (req, res) => {
-    const { id } = req.params;
-    const { shift_group_id } = req.body;
-
-    if (!shift_group_id) {
-        return res.status(400).json({ error: 'shift_group_id is required.' });
-    }
-
-    try {
-        const result = await db.query(
-            'UPDATE employee_master SET shift_group_id = $1 WHERE id = $2 RETURNING id, shift_group_id',
-            [shift_group_id, id]
-        );
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: 'Employee not found.' });
-        }
-        res.json({ message: 'Employee shift updated successfully.' });
-
-    } catch (error) {
-        console.error("Error updating employee shift:", error);
-        res.status(500).json({ error: 'Internal server error.' });
-    }
-});
 
 module.exports = router;

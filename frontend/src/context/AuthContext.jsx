@@ -1,58 +1,79 @@
 // frontend/src/context/AuthContext.js
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { jwtDecode } from 'jwt-decode';
+import api from '../api/axios';
+import { CircularProgress } from '@mui/material';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(sessionStorage.getItem('token'));
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const verifyTokenAndFetchUser = async () => {
-            if (token) {
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                try {
-                    const response = await axios.get('http://localhost:3001/api/auth/me');
-                    setUser(response.data); // Set the full user object
-                } catch (error) {
-                    console.error("Session expired or token invalid", error);
-                    // Token is invalid, clear it
-                    setToken(null);
-                    setUser(null);
+    const initializeAuth = useCallback(async () => {
+        const token = sessionStorage.getItem('token');
+        console.log('[AuthContext] initializeAuth: token from sessionStorage:', token);
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                console.log('[AuthContext] Decoded token:', decoded);
+                if (decoded.exp * 1000 > Date.now()) {
+                    const response = await api.get('/auth/me');
+                    console.log('[AuthContext] /auth/me response:', response);
+                    setUser(response.data);
+                    setIsAuthenticated(true);
+                } else {
                     sessionStorage.removeItem('token');
-                    delete axios.defaults.headers.common['Authorization'];
+                    console.warn('[AuthContext] Token expired, removed from sessionStorage');
                 }
+            } catch (error) {
+                console.error('[AuthContext] Auth initialization error:', error);
+                window.alert('Auth initialization error: ' + (error?.message || error));
+                sessionStorage.removeItem('token');
             }
-            setLoading(false);
-        };
-        verifyTokenAndFetchUser();
-    }, [token]);
+        }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => {
+        initializeAuth();
+    }, [initializeAuth]);
 
     const login = async (email, password) => {
-        const response = await axios.post('http://localhost:3001/api/auth/login', { email, password });
-        const { token, user } = response.data;
-        sessionStorage.setItem('token', token);
-        setToken(token); // This will trigger the useEffect above to fetch user data
-        setUser(user); // Also set user immediately for faster UI update
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        try {
+            const response = await api.post('/auth/login', { email, password });
+            console.log('[AuthContext] login API response:', response);
+            const { token, user: userData } = response.data;
+            sessionStorage.setItem('token', token);
+            setUser(userData);
+            setIsAuthenticated(true);
+            return userData;
+        } catch (error) {
+            console.error('[AuthContext] login error:', error, error?.response);
+            window.alert('Login error: ' + (error?.response?.data?.error || error?.message || error));
+            throw error;
+        }
     };
 
     const logout = () => {
+        // FIX: Remove from sessionStorage
         sessionStorage.removeItem('token');
-        setToken(null);
         setUser(null);
-        delete axios.defaults.headers.common['Authorization'];
+        setIsAuthenticated(false);
     };
 
-    const value = { user, token, login, logout, isAuthenticated: !!user };
+    const value = { user, isAuthenticated, loading, login, logout };
 
-    return (
-        <AuthContext.Provider value={value}>
-            {!loading && children}
-        </AuthContext.Provider>
-    );
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <CircularProgress />
+            </div>
+        );
+    }
+
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);

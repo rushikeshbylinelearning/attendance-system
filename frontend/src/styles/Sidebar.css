@@ -1,0 +1,89 @@
+/* frontend/src/layouts/css/Sidebar.css */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    background-color: #ffffff;
+    border-right: 1px solid #e0e0e0;
+    z-index: 1201; /* Must be higher than the Topbar */
+    transition: width 0.25s ease-in-out;
+    overflow-x: hidden; /* This is key to hiding text when collapsed */
+}
+
+.sidebar.expanded {
+    width: 240px;
+}
+
+.sidebar.collapsed {
+    width: 80px;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px 0 24px;
+    height: 64px; /* Same height as Topbar */
+    flex-shrink: 0;
+}
+
+.sidebar-brand-text {
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+    white-space: nowrap;
+    font-weight: bold;
+}
+
+.sidebar.collapsed .sidebar-brand-text {
+    opacity: 0;
+}
+
+.sidebar-list {
+    width: 100%;
+    padding: 8px 0;
+    overflow-y: auto;
+}
+
+.sidebar-link {
+    display: flex !important;
+    align-items: center !important;
+    padding: 10px 24px !important;
+    margin: 4px 12px !important;
+    color: #444444 !important;
+    text-decoration: none !important;
+    border-radius: 8px !important;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-link.active {
+    background-color: #e3f2fd !important; /* Light blue for active */
+    color: #1976d2 !important; /* Primary blue for active */
+    font-weight: bold;
+}
+
+.sidebar-link:hover {
+    background-color: #f5f5f5 !important;
+}
+
+.sidebar-icon {
+    min-width: 32px !important;
+    color: #666666 !important;
+}
+
+.sidebar-link.active .sidebar-icon {
+    color: inherit !important;
+}
+
+.sidebar-label {
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.sidebar.collapsed .sidebar-label {
+    opacity: 0;
+    display: none;
+}

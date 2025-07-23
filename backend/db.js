@@ -1,17 +1,16 @@
 // backend/db.js
-
-const { Pool } = require('pg');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_DATABASE,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
-
-// Export a query function that we can use throughout our app
-module.exports = {
-  query: (text, params) => pool.query(text, params),
+const connectDB = async () => {
+  try {
+    // This line reads the MONGODB_URI from your .env file
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ MongoDB connected');
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err.message);
+    process.exit(1);
+  }
 };
+
+module.exports = connectDB;

@@ -1,69 +1,128 @@
 // frontend/src/pages/EmployeeDashboardPage.jsx
-
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { 
-    Typography, 
-    Box, 
-    Button, 
-    Paper, 
-    Grid, 
-    CircularProgress, 
-    Alert, 
-    Stack, 
-    Menu, 
-    MenuItem 
-} from '@mui/material';
-import axios from 'axios';
+import { Typography, Button, CircularProgress, Alert, Stack, Menu, MenuItem } from '@mui/material';
+import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-
-// Import all child components
 import WorkTimeTracker from '../components/WorkTimeTracker';
 import BreakTimer from '../components/BreakTimer';
 import ShiftInfoDisplay from '../components/ShiftInfoDisplay';
 import WorkSchedule from '../components/WeeklyTimeCards';
 import LiveClock from '../components/LiveClock';
+import '../styles/Page.css';
 
-// Import the dedicated stylesheet for this page
-import '../styles/EmployeeDashboardPage.css';
-
-// Memoize the WorkSchedule component for performance
 const MemoizedWorkSchedule = memo(WorkSchedule);
+
+/**
+ * Calculates the adjusted logout time based on shift details, clock-in time, and total break duration.
+ * This function handles late clock-ins, break overages, AND unused break time credits.
+ */
+const calculateAdjustedLogoutTime = ({ shift, clockInTime, totalBreakTakenInMinutes }) => {
+    if (!shift || !clockInTime) {
+        return null;
+    }
+
+    const clockInDate = new Date(clockInTime);
+    let finalLogoutDate;
+
+    // --- Logic for Fixed Shifts ---
+    if (shift.startTime && shift.endTime) {
+        const allowedPaidBreakMins = shift.paidBreak || 30;
+
+        // This will be positive for overages and negative for underages (unused break time).
+        const breakAdjustmentMins = totalBreakTakenInMinutes - allowedPaidBreakMins;
+
+        const today = clockInDate.toISOString().split('T')[0];
+        const standardStartTime = new Date(`${today}T${shift.startTime}`);
+        const standardEndTime = new Date(`${today}T${shift.endTime}`);
+
+        // Handle overnight shifts
+        if (standardEndTime < standardStartTime) {
+            standardEndTime.setDate(standardEndTime.getDate() + 1);
+        }
+
+        // Calculate penalty for clocking in late.
+        const lateClockInMs = Math.max(0, clockInDate.getTime() - standardStartTime.getTime());
+        
+        // The base logout time is the standard end time, adjusted for any lateness.
+        const baseLogoutDate = new Date(standardEndTime.getTime() + lateClockInMs);
+
+        // Now, apply the break adjustment (penalty or credit) to the base logout time.
+        baseLogoutDate.setMinutes(baseLogoutDate.getMinutes() + breakAdjustmentMins);
+        finalLogoutDate = baseLogoutDate;
+
+    } 
+    // --- Logic for Flexible Shifts ---
+    else if (shift.duration) { 
+        // For flexible shifts, the formula is simpler:
+        // Logout Time = Clock-In Time + Required Work Duration + Actual Breaks Taken
+        
+        const shiftWorkDurationMs = shift.duration * 60 * 60 * 1000;
+        const actualBreaksMs = totalBreakTakenInMinutes * 60 * 1000;
+        
+        finalLogoutDate = new Date(clockInDate.getTime() + shiftWorkDurationMs + actualBreaksMs);
+    } 
+    else {
+        // If shift has no start/end time and no duration, we can't calculate.
+        return null;
+    }
+
+    return finalLogoutDate.toISOString();
+};
+
 
 const EmployeeDashboardPage = () => {
     const { user } = useAuth();
-    
-    // State for all data fetched from APIs
     const [dailyData, setDailyData] = useState(null);
     const [weeklyLogs, setWeeklyLogs] = useState([]);
-    
-    // State for UI control
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState('');
     const [anchorEl, setAnchorEl] = useState(null);
+    
+    // --- STATE to hold our correctly calculated logout time ---
+    const [clientCalculatedLogoutTime, setClientCalculatedLogoutTime] = useState(null);
+    
     const openBreakMenu = Boolean(anchorEl);
 
-    // This single function fetches all necessary data for the dashboard
     const fetchAllData = useCallback(async () => {
         try {
             const [statusRes, logsRes] = await Promise.all([
-                axios.get('/api/attendance/status'),
-                axios.get('/api/attendance/my-weekly-log')
+                api.get('/attendance/status'),
+                api.get('/attendance/my-weekly-log')
             ]);
             setDailyData(statusRes.data);
             setWeeklyLogs(Array.isArray(logsRes.data) ? logsRes.data : []);
         } catch (err) {
             setError('Failed to load dashboard data. Please refresh the page.');
+            console.error("Dashboard fetch error:", err);
         } finally {
             setLoading(false);
         }
     }, []);
 
-    useEffect(() => {
-        fetchAllData();
-    }, [fetchAllData]);
+    useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
-    // Generic handler for API actions
+    // --- EFFECT to calculate logout time on the client-side whenever data changes ---
+    useEffect(() => {
+        if (dailyData && user?.shift) {
+            const clockInTime = dailyData.sessions?.[0]?.startTime;
+            
+            // Sum up duration of ONLY completed breaks
+            const totalBreakTakenInMinutes = dailyData.breaks?.reduce((total, br) => {
+                return total + (br.durationMinutes || 0);
+            }, 0) || 0;
+
+            if (clockInTime) {
+                const adjustedLogoutTime = calculateAdjustedLogoutTime({
+                    shift: user.shift,
+                    clockInTime: clockInTime,
+                    totalBreakTakenInMinutes: totalBreakTakenInMinutes,
+                });
+                setClientCalculatedLogoutTime(adjustedLogoutTime);
+            }
+        }
+    }, [dailyData, user?.shift]);
+
     const handleApiCall = async (apiCall) => {
         setActionLoading(true);
         setError('');
@@ -77,69 +136,46 @@ const EmployeeDashboardPage = () => {
         }
     };
 
-    // Specific action handlers
-    const handleClockIn = () => handleApiCall(() => axios.post('/api/attendance/clock-in'));
-    const handleClockOut = () => handleApiCall(() => axios.post('/api/attendance/clock-out'));
-    const handleEndBreak = () => handleApiCall(() => axios.post('/api/breaks/end'));
+    const handleClockIn = () => handleApiCall(() => api.post('/attendance/clock-in'));
+    const handleClockOut = () => handleApiCall(() => api.post('/attendance/clock-out'));
+    const handleEndBreak = () => handleApiCall(() => api.post('/breaks/end'));
     const handleOpenBreakMenu = (event) => setAnchorEl(event.currentTarget);
     const handleCloseBreakMenu = () => setAnchorEl(null);
     const handleStartBreak = (breakType) => {
         handleCloseBreakMenu();
-        handleApiCall(() => axios.post('/api/breaks/start', { breakType }));
+        handleApiCall(() => api.post('/breaks/start', { breakType }));
     };
 
-    // ** THIS IS THE UPDATED LOGIC FOR RESUMABLE PAID BREAKS **
-    // 1. Calculate the total minutes of completed paid breaks
-    const paidMinutesUsed = dailyData?.breaks
-        ?.filter(b => b.break_type === 'Paid' && b.duration_minutes)
-        .reduce((sum, b) => sum + b.duration_minutes, 0) || 0;
-    
-    // 2. Get the total allowance from the user's shift info
     const paidBreakAllowance = user?.shift?.paidBreak || 30;
-
-    // 3. Determine if the allowance has been fully used
+    const paidMinutesUsed = dailyData?.breaks?.filter(b => b.breakType === 'Paid' && b.durationMinutes).reduce((sum, b) => sum + b.durationMinutes, 0) || 0;
     const hasExhaustedPaidBreak = paidMinutesUsed >= paidBreakAllowance;
-
-    // 4. The logic for the unpaid break remains the same (check if one has been taken)
-    const hasTakenUnpaidBreak = dailyData?.breaks?.some(b => b.break_type === 'Unpaid');
-
+    const hasTakenUnpaidBreak = dailyData?.breaks?.some(b => b.breakType === 'Unpaid');
 
     const renderActionArea = () => {
         if (actionLoading) return <CircularProgress />;
         switch (dailyData?.status) {
             case 'Not Clocked In':
                 return <Button variant="contained" color="primary" size="large" onClick={handleClockIn}>Clock In</Button>;
-            
             case 'Clocked In':
                 return (
                     <Stack direction="row" spacing={2} justifyContent="center" alignItems="center">
                         <Button variant="contained" color="secondary" onClick={handleOpenBreakMenu}>Start Break</Button>
                         <Menu anchorEl={anchorEl} open={openBreakMenu} onClose={handleCloseBreakMenu}>
-                            <MenuItem 
-                                onClick={() => handleStartBreak('Paid')} 
-                                disabled={hasExhaustedPaidBreak}
-                            >
+                            <MenuItem onClick={() => handleStartBreak('Paid')} disabled={hasExhaustedPaidBreak}>
                                 Paid Break ({paidBreakAllowance - paidMinutesUsed} mins left)
                             </MenuItem>
-                            <MenuItem 
-                                onClick={() => handleStartBreak('Unpaid')} 
-                                disabled={hasTakenUnpaidBreak}
-                            >
-                                10-Min Unpaid Break
-                            </MenuItem>
+                            <MenuItem onClick={() => handleStartBreak('Unpaid')} disabled={hasTakenUnpaidBreak}>Unpaid Break</MenuItem>
                         </Menu>
                         <Button variant="contained" color="error" onClick={handleClockOut}>Clock Out</Button>
                     </Stack>
                 );
-            
             case 'On Break':
                 return (
                     <Stack spacing={2} alignItems="center" sx={{width: '100%'}}>
-                        <BreakTimer breaks={dailyData.breaks} />
+                        <BreakTimer breaks={dailyData.breaks} paidBreakAllowance={paidBreakAllowance} />
                         <Button variant="contained" color="warning" size="large" onClick={handleEndBreak}>End Break</Button>
                     </Stack>
                 );
-            
             case 'Clocked Out':
                 return (
                     <Stack spacing={2} alignItems="center">
@@ -147,52 +183,44 @@ const EmployeeDashboardPage = () => {
                         <Button variant="contained" color="primary" onClick={handleClockIn}>Clock In Again</Button>
                     </Stack>
                 );
-            
             default:
                 return <CircularProgress />;
         }
     };
 
     if (loading) {
-        return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}><CircularProgress size={60} /></Box>;
+        return <div className="flex-center" style={{ height: '60vh' }}><CircularProgress size={60} /></div>;
     }
 
     return (
-        <Box className="employee-dashboard-container">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+        <div className="dashboard-page wide-dashboard-page">
+            <div className="dashboard-header align-center-between gap-16">
                 <Typography variant="h4">Welcome, {user.name}!</Typography>
-                <Paper variant="outlined" sx={{ p: '2px 16px', textAlign: 'right' }}>
-                    <LiveClock />
-                </Paper>
-            </Box>
+                <div className="live-clock-card-small"><LiveClock /></div>
+            </div>
 
-            {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
-            
-            <MemoizedWorkSchedule logs={weeklyLogs} shift={user?.shift} />
+            {error && <Alert severity="error" sx={{ marginBottom: 16 }} onClose={() => setError('')}>{error}</Alert>}
 
-            <Paper sx={{ mt: 3, p: 3 }}>
-                <Grid container spacing={3} alignItems="stretch">
-                    <Grid item xs={12}>
-                        <ShiftInfoDisplay 
-                            shift={user?.shift} 
-                            calculatedLogoutTime={dailyData?.calculatedLogoutTime}
-                            clockInTime={dailyData?.sessions && dailyData.sessions.length > 0 ? dailyData.sessions[0].start_time : null}
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={7}>
-                        <Paper variant="outlined" sx={{ p: 3, display: 'flex', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
-                            {renderActionArea()}
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} md={5}>
-                        <Paper variant="outlined" sx={{ p: 3, height: '100%', justifyContent: 'center', display: 'flex', flexDirection: 'column' }}>
-                            <Typography variant="h6" gutterBottom>Time Tracker</Typography>
-                            <WorkTimeTracker sessions={dailyData?.sessions} status={dailyData?.status} />
-                        </Paper>
-                    </Grid>
-                </Grid>
-            </Paper>
-        </Box>
+            <div className="card" style={{ marginBottom: 24 }}>
+                <MemoizedWorkSchedule logs={weeklyLogs} shift={user?.shift} />
+            </div>
+
+            <div className="dashboard-widgets polished-widgets">
+                <div className="card polished-widget-card">
+                    <ShiftInfoDisplay 
+                        shift={user?.shift} 
+                        // --- FIX: Pass our correctly calculated time instead of the one from the API ---
+                        calculatedLogoutTime={clientCalculatedLogoutTime ? new Date(clientCalculatedLogoutTime) : null}
+                        clockInTime={dailyData?.sessions?.[0]?.startTime}
+                    />
+                </div>
+                <div className="card polished-widget-card flex-center">{renderActionArea()}</div>
+                <div className="card polished-widget-card">
+                    <Typography variant="h6" gutterBottom>Time Tracker</Typography>
+                    <WorkTimeTracker sessions={dailyData?.sessions} status={dailyData?.status} />
+                </div>
+            </div>
+        </div>
     );
 };
 

@@ -1,6 +1,6 @@
 // frontend/src/components/AttendanceTimeline.jsx
 import React, { useMemo } from 'react';
-import { Box, Paper, Typography, IconButton, Grid, Chip, Tooltip } from '@mui/material';
+import { Typography, IconButton, Tooltip } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DailyTimelineRow from './DailyTimelineRow'; // Assuming DailyTimelineRow is in the same folder or path is correct
@@ -39,38 +39,32 @@ const AttendanceTimeline = ({ logs, currentDate, onWeekChange, dailyStatusData }
     const endOfWeek = weekDays[6]?.date;
 
     return (
-        <Paper sx={{ p: 2, mt: 3, overflow: 'hidden' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <div className="card" style={{ marginTop: 24, overflow: 'hidden' }}>
+            <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Typography variant="h6">Time Logs</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <IconButton onClick={() => onWeekChange('prev')} aria-label="previous week">
-                        <ChevronLeftIcon />
-                    </IconButton>
-                    <Typography variant="body1" component="span" sx={{ minWidth: {xs: 150, md: 180}, textAlign: 'center' }}>
+                <div className="flex gap-16" style={{ alignItems: 'center' }}>
+                    <Tooltip title="Previous week"><IconButton onClick={() => onWeekChange('prev')}><ChevronLeftIcon /></IconButton></Tooltip>
+                    <Typography variant="body1" component="span" style={{ minWidth: 150, textAlign: 'center' }}>
                         {startOfWeek?.toLocaleDateString()} - {endOfWeek?.toLocaleDateString()}
                     </Typography>
-                    <IconButton onClick={() => onWeekChange('next')} aria-label="next week">
-                        <ChevronRightIcon />
-                    </IconButton>
-                </Box>
-            </Box>
-
-            {/* Render a row for each day of the week */}
-            {weekDays.map(day => (
-                <DailyTimelineRow 
-                    key={day.date.toISOString()} 
-                    dayData={day}
-                    dailyStatusData={dailyStatusData}
-                />
-            ))}
-            
-            {/* The time axis at the bottom */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 1, ml: {xs: '60px', md:'80px'}, mr: {xs:'40px', md:'120px'} }}>
-                 {['09 AM', '12 PM', '03 PM', '06 PM'].map(time => (
-                     <Typography key={time} variant="caption" color="text.secondary">{time}</Typography>
-                 ))}
-            </Box>
-        </Paper>
+                    <Tooltip title="Next week"><IconButton onClick={() => onWeekChange('next')}><ChevronRightIcon /></IconButton></Tooltip>
+                </div>
+            </div>
+            <div className="gap-16" style={{ display: 'flex', flexDirection: 'column' }}>
+                {weekDays.map(day => (
+                    <DailyTimelineRow 
+                        key={day.date.toISOString()} 
+                        dayData={day}
+                        dailyStatusData={dailyStatusData}
+                    />
+                ))}
+            </div>
+            <div className="flex gap-16" style={{ justifyContent: 'space-around', marginTop: 8, marginLeft: 60, marginRight: 40 }}>
+                {['09 AM', '12 PM', '03 PM', '06 PM'].map(time => (
+                    <Typography key={time} variant="caption" color="text.secondary">{time}</Typography>
+                ))}
+            </div>
+        </div>
     );
 };
 

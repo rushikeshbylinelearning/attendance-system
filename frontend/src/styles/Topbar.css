@@ -1,0 +1,101 @@
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1201; /* Above sidebar */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 32px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--accent-blue);
+  margin-right: 24px;
+}
+
+.topbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  height: 100%;
+}
+
+.topbar-tab {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  height: 48px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #213547;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-bottom 0.2s, background 0.2s;
+  text-decoration: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.topbar-tab.active, .topbar-tab:hover {
+  color: var(--accent-blue);
+  background: #f0f6ff;
+  border-bottom: 2.5px solid var(--accent-blue);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-user {
+  margin-right: 12px;
+  color: #232c57;
+  font-weight: 500;
+}
+
+.topbar-avatar {
+  width: 36px;
+  height: 36px;
+  background: var(--accent-blue);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    height: 56px;
+    padding: 0 8px;
+  }
+  .topbar-title {
+    display: none;
+  }
+  .topbar-tabs {
+    gap: 2px;
+  }
+  .topbar-tab {
+    padding: 0 8px;
+    font-size: 0.95rem;
+    height: 40px;
+  }
+} 

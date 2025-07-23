@@ -1,7 +1,6 @@
 // frontend/src/components/BreakTimer.jsx
-
 import React, { useState, useEffect, memo } from 'react';
-import { Typography, Box, Divider } from '@mui/material';
+import { Typography, Divider } from '@mui/material';
 
 const formatCountdown = (totalSeconds) => {
     if (totalSeconds < 0) totalSeconds = 0;
@@ -10,41 +9,41 @@ const formatCountdown = (totalSeconds) => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-const BreakTimer = ({ breaks, paidBreakAllowance = 30 }) => {
+const BreakTimer = ({ breaks, paidBreakAllowance = 30, unpaidBreakAllowance = 10 }) => {
     const [countdown, setCountdown] = useState(0);
     const [overtime, setOvertime] = useState(0);
-
-    // Find the current active break. The effect depends on this specific object.
-    const activeBreak = breaks.find(b => b.end_time === null);
+    
+    const activeBreak = breaks.find(b => !b.endTime); 
 
     useEffect(() => {
-        // If there's no active break, do nothing.
         if (!activeBreak) return;
 
         const calculateTime = () => {
-            let allowanceThisSessionSeconds;
-
-            if (activeBreak.break_type === 'Paid') {
-                // Calculate time used from *other completed* paid breaks today.
-                const paidMinutesAlreadyTaken = breaks
-                    .filter(b => b.id !== activeBreak.id && b.break_type === 'Paid' && b.duration_minutes)
-                    .reduce((sum, b) => sum + b.duration_minutes, 0);
-                
-                const remainingAllowance = paidBreakAllowance - paidMinutesAlreadyTaken;
-                allowanceThisSessionSeconds = remainingAllowance * 60;
-
-            } else {
-                // For an unpaid break, the allowance is always a fresh 10 minutes.
-                allowanceThisSessionSeconds = 10 * 60;
-            }
-
-            const breakStartTime = new Date(activeBreak.start_time);
+            const breakStartTime = new Date(activeBreak.startTime);
             const now = new Date();
             const elapsedSeconds = Math.floor((now - breakStartTime) / 1000);
-            
+
+            if (activeBreak.isPenalty) {
+                setCountdown(0);
+                setOvertime(elapsedSeconds);
+                return;
+            }
+
+            let allowanceThisSessionSeconds = 0;
+            if (activeBreak.breakType === 'Paid') {
+                const paidMinutesAlreadyTaken = breaks
+                    .filter(b => b._id !== activeBreak._id && b.breakType === 'Paid' && b.durationMinutes)
+                    .reduce((sum, b) => sum + b.durationMinutes, 0);
+                const remainingAllowance = paidBreakAllowance - paidMinutesAlreadyTaken;
+                allowanceThisSessionSeconds = Math.max(0, remainingAllowance * 60);
+            } else if (activeBreak.breakType === 'Unpaid') {
+                // NEW: Unpaid breaks now get a 10-minute timer.
+                // This is a "soft" limit for display; the backend handles the shift extension.
+                allowanceThisSessionSeconds = unpaidBreakAllowance * 60;
+            }
+
             const finalRemainingSeconds = allowanceThisSessionSeconds - elapsedSeconds;
 
-            // Update the state based on the calculation
             if (finalRemainingSeconds >= 0) {
                 setCountdown(finalRemainingSeconds);
                 setOvertime(0);
@@ -54,49 +53,59 @@ const BreakTimer = ({ breaks, paidBreakAllowance = 30 }) => {
             }
         };
 
-        calculateTime(); // Run once immediately to prevent stale display
+        calculateTime();
         const interval = setInterval(calculateTime, 1000);
+        return () => clearInterval(interval);
+    }, [activeBreak, breaks, paidBreakAllowance, unpaidBreakAllowance]);
 
-        return () => clearInterval(interval); // Cleanup interval when component unmounts or effect re-runs
+    if (!activeBreak) return null;
 
-    // ** THIS IS THE FIX **
-    // The effect will re-run if the entire 'breaks' array changes,
-    // or crucially, if the specific 'activeBreak' object instance changes.
-    // When you end a break and start a new one, the `activeBreak` object is different,
-    // triggering a fresh calculation.
-    }, [activeBreak, breaks, paidBreakAllowance]);
+    const isPaidBreak = activeBreak.breakType === 'Paid';
+    const isPenaltyBreak = activeBreak.isPenalty;
 
-    if (!activeBreak) {
-        return null; // Don't render if there's no active break
-    }
+    const getTitle = () => {
+        if (isPenaltyBreak) return 'Penalty Break In Progress';
+        return `${isPaidBreak ? 'Paid Break' : 'Unpaid Break'} In Progress`;
+    };
 
-    const isPaidBreak = activeBreak.break_type === 'Paid';
+    const getCaption = () => {
+        if (isPenaltyBreak) {
+            return "You have exceeded the maximum number of breaks. This time will be added to your shift.";
+        }
+        if (overtime > 0) {
+            return isPaidBreak 
+                ? "This extra time may be added to your shift."
+                : "Unpaid break time extends your shift.";
+        }
+        return null;
+    };
 
     return (
-        <Box sx={{ textAlign: 'center', width: '100%' }}>
+        <div className="card" style={{ textAlign: 'center', width: '100%', marginBottom: 16 }}>
             <Typography variant="h6" gutterBottom>
-                {isPaidBreak ? 'Paid Break' : 'Unpaid Break'} In Progress
+                {getTitle()}
             </Typography>
-            <Divider sx={{ my: 1 }} />
-            {overtime === 0 ? (
-                <>
-                    <Typography variant="body1">Time Remaining:</Typography>
-                    <Typography variant="h4" sx={{ color: 'success.main', fontWeight: 'bold' }}>
-                        {formatCountdown(countdown)}
+            <Divider style={{ margin: '8px 0' }} />
+            
+            {isPenaltyBreak || overtime > 0 ? (
+                 <>
+                    <Typography variant="body1">{isPenaltyBreak ? 'Penalty Time:' : 'Extra time taken:'}</Typography>
+                    <Typography variant="h4" style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                        +{formatCountdown(overtime)}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                       {getCaption()}
                     </Typography>
                 </>
             ) : (
                 <>
-                    <Typography variant="body1">Extra time taken:</Typography>
-                    <Typography variant="h4" sx={{ color: 'error.main', fontWeight: 'bold' }}>
-                        +{formatCountdown(overtime)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        This may be added to your shift time.
+                    <Typography variant="body1">Time Remaining:</Typography>
+                    <Typography variant="h4" style={{ color: '#22c55e', fontWeight: 'bold' }}>
+                        {formatCountdown(countdown)}
                     </Typography>
                 </>
             )}
-        </Box>
+        </div>
     );
 };
 

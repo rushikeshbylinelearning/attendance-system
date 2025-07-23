@@ -1,9 +1,7 @@
 // frontend/src/components/WorkTimeTracker.jsx
-
 import React, { useState, useEffect, memo } from 'react';
 import { Typography } from '@mui/material';
 
-// Helper function to format milliseconds into HH:MM:SS
 const formatTime = (ms) => {
     if (ms < 0) ms = 0;
     const totalSeconds = Math.floor(ms / 1000);
@@ -20,48 +18,51 @@ const WorkTimeTracker = ({ sessions, status }) => {
         const calculateWorkTime = () => {
             let completedTime = 0;
             let activeSessionStart = null;
+            let activeSession = null;
 
             if (sessions) {
                 sessions.forEach(session => {
-                    if (session.end_time) {
-                        completedTime += new Date(session.end_time) - new Date(session.start_time);
+                    if (session.endTime) {
+                        completedTime += new Date(session.endTime) - new Date(session.startTime);
                     } else {
-                        activeSessionStart = new Date(session.start_time);
+                        // This is the current, unterminated work session
+                        activeSession = session;
+                        activeSessionStart = new Date(session.startTime);
                     }
                 });
             }
 
             let currentTotal = completedTime;
-            // Only add the ticking time of the active session if the user is 'Clocked In'
-            if (activeSessionStart && status === 'Clocked In') {
+            
+            // --- START OF FIX ---
+            // If there's an active session, we need to calculate its duration up to "now",
+            // regardless of whether we are 'Clocked In' or 'On Break'.
+            // The status only determines if the timer KEEPS running.
+            if (activeSessionStart) {
                 currentTotal += new Date() - activeSessionStart;
             }
+            // --- END OF FIX ---
             
             setTotalWorkTime(currentTotal);
         };
 
-        // Run the calculation immediately
         calculateWorkTime();
         
-        // Only set up the ticking interval if the user is currently clocked in.
-        // This is more efficient and prevents unnecessary timers.
+        // The interval should ONLY run if the status is 'Clocked In'.
+        // This is correct and doesn't need to change.
         if (status === 'Clocked In') {
             const interval = setInterval(calculateWorkTime, 1000);
-            // Cleanup function for the interval
             return () => clearInterval(interval);
         }
-
-    // ** THIS IS THE FIX **
-    // The effect will now re-run whenever the sessions array OR the status string changes.
-    // This ensures that when the status changes to 'On Break', the timer correctly pauses.
     }, [sessions, status]);
 
     return (
-        <Typography variant="h5" component="p" sx={{ fontWeight: 'bold', color: 'primary.main', mt: 1 }}>
-            Total Work Time Today: {formatTime(totalWorkTime)}
-        </Typography>
+        <div className="card" style={{ marginTop: 8, padding: 16, textAlign: 'center' }}>
+            <Typography variant="h5" component="p" style={{ fontWeight: 'bold', color: '#2563eb', marginTop: 8 }}>
+                Total Work Time Today: {formatTime(totalWorkTime)}
+            </Typography>
+        </div>
     );
 };
 
-// Memoize to prevent re-renders if props haven't changed
 export default memo(WorkTimeTracker);

@@ -1,10 +1,38 @@
 /* frontend/src/components/css/MainLayout.css */
 
-/* This gives us the smooth transition effect for the sidebar and main content */
-.main-content-shifted {
-    transition: margin 225ms cubic-bezier(0.0, 0, 0.2, 1) 0ms;
+.main-layout {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  background: #f4f7fb;
+  display: flex;
+  flex-direction: row;
 }
 
-.appbar-shifted {
-    transition: width 225ms cubic-bezier(0.0, 0, 0.2, 1) 0ms;
+.main-content {
+  flex: 1 1 0%;
+  min-height: 100vh;
+  padding-left: 220px; /* Sidebar width when open */
+  padding-top: 64px;   /* Topbar height */
+  background: #f4f7fb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  transition: padding 0.3s;
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    padding-left: 64px;
+    padding-top: 56px;
+  }
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding-left: 48px;
+    padding-top: 56px;
+  }
 }
