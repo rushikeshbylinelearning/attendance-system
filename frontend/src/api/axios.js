@@ -1,16 +1,16 @@
 // frontend/src/api/axios.js
 import axios from 'axios';
 
-// const api = axios.create({
-//   baseURL: 'https://attendance.bylinelms.com/api',
-//   headers: {
-//     'Content-Type': 'application/json',
-//   },
-// });
-
 const api = axios.create({
-  baseURL: 'http://localhost:3001/api' // <-- CORRECTED FOR LOCAL DEVELOPMENT
+  baseURL: 'https://attendance.bylinelms.com/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
+
+// const api = axios.create({
+//   baseURL: 'http://localhost:3001/api' // <-- CORRECTED FOR LOCAL DEVELOPMENT
+// });
 
 api.interceptors.request.use(
   (config) => {

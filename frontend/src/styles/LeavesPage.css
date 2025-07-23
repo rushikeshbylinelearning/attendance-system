@@ -1,0 +1,58 @@
+/* Apply a negative margin to pull the content 20% to the left */
+.leaves-page-container {
+    margin-left: -5%;
+    /* We can also add a transition for a smoother effect if the sidebar collapses, but this is the core logic */
+    /* transition: margin-left 0.3s ease-in-out; */
+}
+
+/* Main grid layout for the page content */
+.leaves-main-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Default for mobile */
+    gap: 24px;
+    margin-bottom: 24px;
+    align-items: start;
+}
+
+/* Adjust grid layout for medium screens and up */
+@media (min-width: 960px) { /* Corresponds to MUI's 'md' breakpoint */
+    .leaves-main-grid {
+        grid-template-columns: 1fr 350px;
+    }
+}
+
+/* Header section for the "My Requests" card */
+.requests-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+/* Container for the action buttons (Request Swap, etc.) */
+.request-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Sets a fixed height for the DataGrid container */
+.datagrid-container {
+    height: 400px;
+    width: 100%;
+}
+
+/* Centered container for the loading spinner */
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 60vh;
+}
+
+/* Margin for the main error alert on the page */
+.page-error-alert {
+    margin-bottom: 16px;
+}

@@ -14,8 +14,6 @@ router.post('/login', async (req, res) => {
     }
 
     try {
-        // FIX: Use a case-insensitive regular expression for the lookup.
-        // This ensures 'admin@example.com' matches 'Admin@example.com'.
         const user = await User.findOne({
             $or: [
                 { email: { $regex: new RegExp(`^${email}$`, 'i') } }, 
@@ -45,6 +43,8 @@ router.post('/login', async (req, res) => {
                 name: user.fullName,
                 email: user.email,
                 role: user.role,
+                // --- FIX: Add the missing field to the response ---
+                alternateSaturdayPolicy: user.alternateSaturdayPolicy,
                 shift: user.shiftGroup ? {
                     id: user.shiftGroup._id,
                     name: user.shiftGroup.shiftName,
@@ -73,6 +73,8 @@ router.get('/me', authenticateToken, async (req, res) => {
             name: user.fullName,
             email: user.email,
             role: user.role,
+            // --- FIX: Add the missing field to the response ---
+            alternateSaturdayPolicy: user.alternateSaturdayPolicy,
             shift: user.shiftGroup ? {
                 id: user.shiftGroup._id,
                 name: user.shiftGroup.shiftName,

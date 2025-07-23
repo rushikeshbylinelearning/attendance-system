@@ -1,4 +1,3 @@
-// frontend/src/components/Sidebar.jsx
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -12,19 +11,27 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { useAuth } from '../context/AuthContext';
 import './Sidebar.css';
 
-const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard', roles: ['Employee', 'Intern', 'HR', 'Admin'] },
-    { text: 'View Logs', icon: <FindInPageIcon />, path: '/employee-logs', roles: ['HR', 'Admin'] },
-    { text: 'Employees', icon: <PeopleIcon />, path: '/employees', roles: ['HR', 'Admin'] },
-    { text: 'Shift Management', icon: <TimelapseIcon />, path: '/shifts', roles: ['Admin'] },
-    { text: 'Leave Management', icon: <EventNoteIcon />, path: '/leaves', roles: ['Employee', 'Intern', 'HR', 'Admin'] },
-    { text: 'Reports', icon: <AdminPanelSettingsIcon />, path: '/admin', roles: ['Admin'] },
-];
-
 const Sidebar = () => {
     const { user } = useAuth();
     const [open, setOpen] = useState(false); // Default to collapsed (mini) sidebar
     const toggleSidebar = () => setOpen((prev) => !prev);
+
+    // --- UPDATED: Define menu items with role-based paths ---
+    const menuItems = [
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard', roles: ['Employee', 'Intern', 'HR', 'Admin'] },
+        { text: 'View Logs', icon: <FindInPageIcon />, path: '/employee-logs', roles: ['HR', 'Admin'] },
+        { text: 'Employees', icon: <PeopleIcon />, path: '/employees', roles: ['HR', 'Admin'] },
+        { text: 'Shift Management', icon: <TimelapseIcon />, path: '/shifts', roles: ['Admin'] },
+        { 
+            text: 'Leave Management', 
+            icon: <EventNoteIcon />, 
+            // Conditional path based on user role
+            path: (user && ['Admin', 'HR'].includes(user.role)) ? '/admin/leaves' : '/leaves', 
+            roles: ['Employee', 'Intern', 'HR', 'Admin'] 
+        },
+        { text: 'Reports', icon: <AdminPanelSettingsIcon />, path: '/admin', roles: ['Admin'] },
+    ];
+
 
     return (
         <nav className={`sidebar${open ? ' open' : ' collapsed'}`}> 
@@ -35,7 +42,7 @@ const Sidebar = () => {
                 {menuItems.filter(item => item.roles.includes(user.role)).map((item) => (
                     <div className="sidebar-list-item" key={item.text}>
                         <NavLink
-                            to={item.path}
+                            to={item.path} // The path is now dynamic
                             className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
                         >
                             <span className="sidebar-icon">{item.icon}</span>

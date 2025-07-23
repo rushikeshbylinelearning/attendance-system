@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3001', // ✅ Correct backend port
+        target: 'https://attendance.bylinelms.com', // ✅ Correct backend port
         changeOrigin: true,
         secure: false, // Optional: avoid SSL issues during development
       }

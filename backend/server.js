@@ -11,6 +11,7 @@ require('./models/Shift');
 require('./models/AttendanceLog');
 require('./models/AttendanceSession');
 require('./models/BreakLog');
+require('./models/LeaveRequest'); // <-- ADD THIS
 
 // Route Imports
 const authRoutes = require('./routes/auth');
@@ -19,6 +20,7 @@ const breakRoutes = require('./routes/breaks');
 const adminRoutes = require('./routes/admin');
 const employeeRoutes = require('./routes/employees');
 const shiftRoutes = require('./routes/shifts');
+const leaveRoutes = require('./routes/leaves'); // <-- ADD THIS
 
 // --- Models --- (Need to import User model for the setup route)
 const User = require('./models/User');
@@ -83,6 +85,7 @@ app.post('/api/setup/create-first-admin', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/breaks', breakRoutes);
+app.use('/api/leaves', leaveRoutes); // <-- ADD THIS
 app.use('/api/admin/employees', employeeRoutes);
 app.use('/api/admin/shifts', shiftRoutes);
 app.use('/api/admin', adminRoutes);

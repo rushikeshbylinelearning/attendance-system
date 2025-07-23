@@ -1,0 +1,96 @@
+/* Main container for the redesigned shift info card */
+.shift-info-card {
+    background-color: #ffffff;
+    padding: 8px 20px; /* Vertical padding is smaller since rows have their own */
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.shift-info-card.no-shift {
+    text-align: center;
+    padding: 24px;
+}
+
+/* Defines a row for a piece of information (label + value) */
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+}
+
+/* Style for the labels (e.g., "Your Shift", "Clocked In At") */
+.info-label {
+    font-size: 0.9rem !important;
+    color: #555;
+}
+
+/* Common style for the value part of the row */
+.info-value {
+    font-weight: 600 !important;
+    text-align: right;
+}
+
+/* Specific styling for the shift name value */
+.shift-name-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold !important;
+}
+
+/* Styling for the horizontal line between rows */
+.info-divider {
+    margin: 0 !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Styling for the clock-in time value */
+.clock-in-time {
+    color: #6b7280; /* Default gray color */
+}
+
+.clock-in-time.active {
+    color: #22c55e; /* Green when active */
+}
+
+/* Container for multi-part values, like the logout times */
+.info-value-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* Logout "Calculate" state */
+.logout-time-calculate {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #6b7280;
+}
+
+/* Standard logout time (the gray, strikethrough text) */
+.logout-time-standard {
+    text-decoration: line-through;
+    color: #9e9e9e;
+    font-size: 0.8rem !important;
+    margin-bottom: 2px !important;
+}
+
+/* Common style for the main logout time display */
+.logout-time-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700 !important;
+}
+
+/* Red color for warning/extended time */
+.logout-time-warning {
+    color: #ef4444; 
+}
+
+/* Blue color for normal/on-time logout */
+.logout-time-normal {
+    color: #2563eb;
+}

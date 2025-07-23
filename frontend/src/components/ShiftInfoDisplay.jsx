@@ -5,6 +5,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import UpdateIcon from '@mui/icons-material/Update';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import TimerOffIcon from '@mui/icons-material/TimerOff';
+import '../styles/ShiftInfoDisplay.css'; // Import the updated CSS file
 
 // Helper to format time strings (e.g., "17:00") or Date objects to 12-hour format
 const formatTimeTo12Hour = (time) => {
@@ -12,21 +13,14 @@ const formatTimeTo12Hour = (time) => {
 
     let date;
 
-    // The 'time' can be:
-    // 1. A full ISO date string (from clockInTime, calculatedLogoutTime)
-    // 2. A "HH:mm" time string (from shift.startTime, shift.endTime)
-    // 3. A Date object
     if (typeof time === 'string') {
-        // First, try to parse as a full date string (like ISO format)
         const parsedDate = new Date(time);
         if (!isNaN(parsedDate.getTime())) {
             date = parsedDate;
         } else {
-            // If that fails, assume it's a time-only string "HH:mm"
             date = new Date(`1970-01-01T${time}`);
         }
     } else {
-        // Assume it's already a Date object or something `new Date` can handle
         date = new Date(time);
     }
     
@@ -40,7 +34,7 @@ const formatTimeTo12Hour = (time) => {
 const ShiftInfoDisplay = ({ shift, calculatedLogoutTime, clockInTime }) => {
     if (!shift) {
         return (
-            <div className="card" style={{ background: '#fafafa', padding: 24, textAlign: 'center' }}>
+            <div className="card shift-info-card no-shift">
                 <Typography>No shift assigned for today.</Typography>
             </div>
         );
@@ -51,8 +45,6 @@ const ShiftInfoDisplay = ({ shift, calculatedLogoutTime, clockInTime }) => {
     const shiftStartTime = shift.startTime;
     const shiftEndTime = shift.endTime;
     const shiftDuration = shift.duration || shift.durationHours;
-    
-    // A flexible shift is defined by not having a fixed start time.
     const isFlexible = !shiftStartTime;
 
     // --- Time Formatting ---
@@ -63,80 +55,72 @@ const ShiftInfoDisplay = ({ shift, calculatedLogoutTime, clockInTime }) => {
     
     // --- Display Logic ---
     const finalLogoutTime = dynamicEndTime !== 'N/A' ? dynamicEndTime : standardEndTime;
-    const isExtended = dynamicEndTime !== 'N/A' && dynamicEndTime !== standardEndTime && !!clockInTime;
+    const isLogoutTimeModified = dynamicEndTime !== 'N/A' && dynamicEndTime !== standardEndTime && !!clockInTime;
 
     const renderLogoutInfo = () => {
-        // Case 1: Flexible shift, not yet clocked in.
-        if (isFlexible && !clockInTime) {
+        if (!clockInTime) {
             return (
-                <Typography variant="h6" component="p" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#6b7280' }}>
-                    <TimerOffIcon /> Clock in to calculate
+                <Typography variant="body1" className="info-value-group logout-time-calculate">
+                    <TimerOffIcon fontSize="small" />
+                    <span>Calculate</span>
                 </Typography>
             );
         }
 
-        // Case 2: Logout time has been extended due to breaks or late clock-in.
-        if (isExtended) {
+        if (isLogoutTimeModified) {
             return (
-                <>
+                <div className="info-value-group">
                     {!isFlexible && (
-                        <Typography variant="body1" component="p" style={{ textDecoration: 'line-through', color: '#9e9e9e' }}>
+                        <Typography variant="caption" className="logout-time-standard">
                             Standard: {standardEndTime}
                         </Typography>
                     )}
-                    <Typography variant="h5" component="p" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontWeight: 'bold' }}>
+                    <Typography variant="h6" component="p" className="logout-time-display logout-time-warning">
                         <WarningAmberIcon /> {finalLogoutTime}
                     </Typography>
-                </>
+                </div>
             );
         }
         
-        // Case 3: Standard or calculated logout time without extension.
         return (
-            <Typography variant="h5" component="p" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#2563eb', fontWeight: 'bold' }}>
+             <Typography variant="h6" component="p" className="logout-time-display logout-time-normal">
                 <UpdateIcon /> {finalLogoutTime}
             </Typography>
         );
     };
 
     return (
-        <div className="card" style={{ background: '#fafafa', padding: 24, borderRadius: 8 }}>
-            <div
-                className="shift-card-container"
-                style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 16,
-                }}
-            >
-                {/* Shift Block */}
-                <div style={{ flex: 1, minWidth: 220, textAlign: 'center' }}>
-                    <Typography variant="body2" color="textSecondary">Your Shift</Typography>
-                    <Typography variant="h6" component="p" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                        <AccessTimeIcon fontSize="small" />
-                        <strong>
-                            {isFlexible 
-                                ? `${shiftName} (${shiftDuration} Hours)`
-                                : `${shiftName} (${standardStartTime} - ${standardEndTime})`
-                            }
-                        </strong>
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary" style={{ marginTop: 12 }}>Clocked In At</Typography>
-                    <Typography variant="h6" component="p" style={{ color: formattedClockIn !== 'N/A' ? '#22c55e' : '#6b7280', fontWeight: 'bold' }}>
-                        {formattedClockIn}
-                    </Typography>
-                </div>
+        <div className="card shift-info-card">
+            {/* Row 1: Shift Details */}
+            <div className="info-row">
+                <Typography className="info-label">Your Shift</Typography>
+                <Typography className="info-value shift-name-value" component="div">
+                    <AccessTimeIcon />
+                    <strong>
+                        {isFlexible 
+                            ? `${shiftName} (${shiftDuration} Hours)`
+                            : `${shiftName} (${standardStartTime} - ${standardEndTime})`
+                        }
+                    </strong>
+                </Typography>
+            </div>
 
-                {/* Divider */}
-                <Divider orientation="vertical" flexItem style={{ margin: '0 16px', alignSelf: 'stretch' }} />
+            <Divider className="info-divider" />
 
-                {/* Logout Block */}
-                <div style={{ flex: 1, minWidth: 220, textAlign: 'center' }}>
-                    <Typography variant="body2" color="textSecondary">Required Log Out</Typography>
-                    {renderLogoutInfo()}
-                </div>
+            {/* Row 2: Clock In Time */}
+            <div className="info-row">
+                <Typography className="info-label">Clocked In At</Typography>
+                <Typography variant="h6" className={`info-value clock-in-time ${formattedClockIn !== 'N/A' ? 'active' : ''}`}>
+                    {formattedClockIn}
+                </Typography>
+            </div>
+
+            <Divider className="info-divider" />
+
+            {/* Row 3: Required Log Out */}
+            <div className="info-row">
+                <Typography className="info-label">Required Log Out</Typography>
+                {renderLogoutInfo()}
             </div>
         </div>
     );

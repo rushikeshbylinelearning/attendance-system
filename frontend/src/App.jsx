@@ -18,7 +18,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import EmployeeDashboardPage from './pages/EmployeeDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import EmployeeLogViewer from './pages/EmployeeLogViewer';
-
+import LeavesPage from './pages/LeavesPage';
+import AdminLeavesPage from './pages/AdminLeavesPage';
 
 const theme = createTheme({
     palette: {
@@ -57,8 +58,9 @@ function App() {
                                 <Route path="/employee-logs" element={<EmployeeLogViewer />} />
                                 <Route path="/employees" element={<EmployeesPage />} />
                                 {/* Placeholder for a future page */}
-                                <Route path="/leaves" element={<div>Leave Management Page</div>} />
+                                <Route path="/leaves" element={<LeavesPage />} />
                                 <Route path="/shifts" element={<ShiftsPage />} />
+                                <Route path="/admin/leaves" element={<ProtectedRoute><AdminLeavesPage /></ProtectedRoute>} />
                                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             </Route>
 
