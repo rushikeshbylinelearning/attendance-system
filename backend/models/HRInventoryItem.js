@@ -5,13 +5,13 @@ const HRInventoryItemSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true
-  },
+  }, // e.g., Pen, Diary
 
   name: {
     type: String,
     required: true,
     trim: true
-  },
+  }, // Item name or description
 
   brand: {
     type: String,
@@ -26,7 +26,7 @@ const HRInventoryItemSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['Assigned', 'Unassigned'],
+    enum: ['Assigned', 'Unassigned'], // ✅ Must match frontend values
     default: 'Unassigned',
     required: true
   },

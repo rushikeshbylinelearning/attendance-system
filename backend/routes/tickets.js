@@ -5,6 +5,7 @@ const router = express.Router();
 const Ticket = require('../models/Ticket');
 const User = require('../models/User'); // Import the User model to filter by user name
 const auth = require('../middleware/auth');
+const admin = require('../middleware/admin');
 
 router.use(auth);
 
@@ -130,5 +131,60 @@ router.delete('/:id', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+router.get('/user-stats/:userId', auth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check if the user exists first (optional but good practice)
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Use Promise.all to run counting queries in parallel for better performance
+    const [total, open, closed] = await Promise.all([
+      Ticket.countDocuments({ createdBy: userId }),
+      Ticket.countDocuments({ createdBy: userId, status: 'Open' }),
+      Ticket.countDocuments({ createdBy: userId, status: 'Closed' })
+    ]);
+
+    res.json({ total, open, closed });
+
+  } catch (err) {
+    console.error("Error fetching user ticket stats:", err.message); // Log the specific error
+    if (err.kind === 'ObjectId') {
+        return res.status(404).json({ msg: 'User not found' });
+    }
+    res.status(500).json({ msg: 'Server Error' }); // Send a JSON response for errors
+  }
+});
+router.post('/batch-delete', admin, async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    // Validate input
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'Ticket IDs must be provided as a non-empty array.' });
+    }
+
+    // Use Mongoose deleteMany to remove all documents matching the IDs
+    const result = await Ticket.deleteMany({
+      _id: { $in: ids }, // The $in operator matches any of the values specified in an array
+    });
+
+    if (result.deletedCount === 0) {
+        return res.status(404).json({ message: 'No matching tickets found to delete.' });
+    }
+
+    res.status(200).json({
+      message: `${result.deletedCount} ticket(s) deleted successfully.`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error('Error during batch deletion:', error);
+    res.status(500).json({ message: 'Server error during batch deletion.' });
+  }
+});
+
 
 module.exports = router;

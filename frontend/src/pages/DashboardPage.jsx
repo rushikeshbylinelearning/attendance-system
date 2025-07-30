@@ -1,17 +1,12 @@
-// src/pages/DashboardPage.jsx
+// src/pages/DashboardPage.jsx (Corrected)
 
+// Keep all existing imports at the top of your file
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/services/api';
 import PageLayout from '@/components/PageLayout';
 import MyAssetsTable from '@/components/MyAssetsTable';
-
-import {
-    Box,
-    Typography,
-    CircularProgress
-} from '@mui/material';
-
+import { Box, Typography, CircularProgress } from '@mui/material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import GroupIcon from '@mui/icons-material/Group';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
@@ -22,86 +17,81 @@ import ComputerIcon from '@mui/icons-material/Computer';
 import PhoneIcon from '@mui/icons-material/Phone';
 import TabletIcon from '@mui/icons-material/Tablet';
 import CategoryIcon from '@mui/icons-material/Category';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 
 import '../styles/DashboardPage.css';
 
-
-// --- FULLY ENHANCED MODAL COMPONENT ---
+// ComponentDetailModal and other components remain unchanged...
 const ComponentDetailModal = ({ isOpen, onClose, title, data }) => {
     const [activeFilters, setActiveFilters] = useState({});
 
-    // *** CORRECTION APPLIED HERE: Smarter configuration with robust data parsing and complete columns ***
+    const toCamelCase = (str) => {
+        if (!str) return '';
+        return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => 
+            index === 0 ? word.toLowerCase() : word.toUpperCase()
+        ).replace(/\s+/g, '');
+    };
+    
     const componentConfigurations = {
         Monitor: {
-            columns: ['Brand', 'Model', 'Serial Number', 'Screen Size'],
-            filters: [
-                { key: 'brand', label: 'Brand' },
-                { key: 'screenSize', label: 'Screen Size' }
-            ],
+            columns: ['Brand', 'Model', 'Serial Number', 'Screen Size', 'Status'],
+            filters: [ { key: 'brand', label: 'Brand' }, { key: 'screenSize', label: 'Screen Size' } ],
             getValue: (item, key) => {
                 switch(key) {
                     case 'brand': return item.brand;
                     case 'model': return item.model;
                     case 'serialNumber': return item.serialNumber;
                     case 'screenSize': {
-                        // FIX: First, check specifications as a fallback.
-                        if (item.specifications?.screenSize) {
-                            return item.specifications.screenSize;
-                        }
-                        // Then, intelligently parse from the model string, which is the primary source.
+                        if (item.specifications?.screenSize) return item.specifications.screenSize;
                         const match = item.model?.match(/(\d{2,3})\s?(inch|")/i);
-                        // Return a standardized format like "27"" if a match is found.
                         return match ? `${match[1]}"` : null;
                     }
+                    case 'status': return item.status === 'Assigned' ? 'In Use' : 'Available';
                     default: return 'N/A';
                 }
             }
         },
         CPU: {
-            columns: ['Brand', 'Model', 'Serial Number', 'Processor', 'RAM', 'Storage'],
-            filters: [
-                { key: 'brand', label: 'Brand' },
-                { key: 'processor', label: 'Processor' },
-                { key: 'ram', label: 'RAM' }
-            ],
+            columns: ['Brand', 'Model', 'Serial Number', 'Processor', 'RAM', 'Storage', 'Status'],
+            filters: [ { key: 'brand', label: 'Brand' }, { key: 'processor', label: 'Processor' }, { key: 'ram', label: 'RAM' } ],
             getValue: (item, key) => {
                 switch(key) {
                     case 'brand': return item.brand;
                     case 'model': return item.model;
-                    case 'serialNumber': return item.serialNumber; // FIX: Added missing serial number access
+                    case 'serialNumber': return item.serialNumber;
                     case 'processor': return item.specifications?.processor;
                     case 'ram': return item.specifications?.ram;
                     case 'storage': return item.specifications?.storage;
+                    case 'status': return item.status === 'Assigned' ? 'In Use' : 'Available';
                     default: return 'N/A';
                 }
             }
         },
         Laptop: {
-            columns: ['Brand', 'Model', 'Serial Number', 'Processor', 'RAM', 'Storage'],
-            filters: [
-                { key: 'brand', label: 'Brand' },
-                { key: 'ram', label: 'RAM' }
-            ],
+            columns: ['Brand', 'Model', 'Serial Number', 'Processor', 'RAM', 'Storage', 'Status'],
+            filters: [ { key: 'brand', label: 'Brand' }, { key: 'ram', label: 'RAM' } ],
             getValue: (item, key) => {
                 switch(key) {
                     case 'brand': return item.brand;
                     case 'model': return item.model;
-                    case 'serialNumber': return item.serialNumber; // FIX: Added missing serial number access
+                    case 'serialNumber': return item.serialNumber;
                     case 'processor': return item.specifications?.processor;
                     case 'ram': return item.specifications?.ram;
                     case 'storage': return item.specifications?.storage;
+                    case 'status': return item.status === 'Assigned' ? 'In Use' : 'Available';
                     default: return 'N/A';
                 }
             }
         },
         default: {
-            columns: ['Brand', 'Model', 'Serial Number'],
+            columns: ['Brand', 'Model', 'Serial Number', 'Status'],
             filters: [{ key: 'brand', label: 'Brand' }],
              getValue: (item, key) => {
                 switch(key) {
                     case 'brand': return item.brand;
                     case 'model': return item.model;
                     case 'serialNumber': return item.serialNumber;
+                    case 'status': return item.status === 'Assigned' ? 'In Use' : 'Available';
                     default: return 'N/A';
                 }
             }
@@ -112,17 +102,14 @@ const ComponentDetailModal = ({ isOpen, onClose, title, data }) => {
     const config = componentConfigurations[componentKey];
     
     useEffect(() => {
-        if (isOpen) {
-            setActiveFilters({});
-        }
+        if (isOpen) { setActiveFilters({}); }
         const handleEsc = (event) => { if (event.keyCode === 27) onClose(); };
         window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
     }, [isOpen, onClose]);
 
-    const handleFilterChange = (key, value) => {
-        setActiveFilters(prev => ({ ...prev, [key]: value }));
-    };
+    const handleFilterChange = (key, value) => { setActiveFilters(prev => ({ ...prev, [key]: value })); };
+    const handleClearFilters = () => { setActiveFilters({}); };
     
     const filterOptions = useMemo(() => {
         if (!data || !config.filters) return {};
@@ -146,53 +133,44 @@ const ComponentDetailModal = ({ isOpen, onClose, title, data }) => {
 
     if (!isOpen) return null;
 
+    const areFiltersActive = Object.values(activeFilters).some(v => v);
+
     return (
-        <div className="modal-backdrop" onClick={onClose}>
-            <div className="modal-container" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <div className="modal-title-section">
-                        <h3 className="modal-title">{title}</h3>
-                        {data.length !== filteredData.length && (
-                             <span className="modal-filtered-count">
-                                Showing {filteredData.length} of {data.length} items
-                            </span>
-                        )}
+        <div className="modal-backdrop-new" onClick={onClose}>
+            <div className="modal-container-new" onClick={e => e.stopPropagation()}>
+                <div className="modal-header-new">
+                    <div className="modal-header-main-new">
+                        <div className="modal-title-group-new">
+                           <div className="modal-title-icon-new"><ListAltIcon fontSize="inherit" /></div>
+                            <h3 className="modal-title-new">{title} Inventory</h3>
+                        </div>
+                        <p className="modal-subtitle-new">Viewing {filteredData.length} of {data.length} total items.{areFiltersActive && ' (Filters Applied)'}</p>
                     </div>
-                    <div className="modal-filters">
-                        {config.filters.map(filter => (
-                            <div key={filter.key} className="filter-group">
-                                <label htmlFor={filter.key}>{filter.label}</label>
-                                <select id={filter.key} value={activeFilters[filter.key] || ''} onChange={(e) => handleFilterChange(filter.key, e.target.value)}>
-                                    <option value="">All</option>
-                                    {filterOptions[filter.key]?.map(option => (<option key={option} value={option}>{option}</option>))}
-                                </select>
-                            </div>
-                        ))}
-                    </div>
-                    <button className="modal-close-btn" onClick={onClose}>×</button>
+                    <button className="modal-close-btn-new" onClick={onClose}>×</button>
                 </div>
-                <div className="modal-body">
-                    <div className="detail-table-wrapper">
-                        <table className="detail-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    {config.columns.map(col => <th key={col}>{col}</th>)}
-                                </tr>
-                            </thead>
+                <div className="modal-filters-new">
+                    {config.filters.map(filter => (
+                        <div key={filter.key} className="filter-group-new">
+                            <label htmlFor={filter.key}>{filter.label}</label>
+                            <select id={filter.key} className="filter-select-new" value={activeFilters[filter.key] || ''} onChange={(e) => handleFilterChange(filter.key, e.target.value)}>
+                                <option value="">All {filter.label}s</option>
+                                {filterOptions[filter.key]?.map(option => (<option key={option} value={option}>{option}</option>))}
+                            </select>
+                        </div>
+                    ))}
+                    {areFiltersActive && (<button className="filter-clear-btn-new" onClick={handleClearFilters}>Clear</button>)}
+                </div>
+                <div className="modal-body-new">
+                    <div className="detail-table-wrapper-new">
+                        <table className="detail-table-new">
+                            <thead><tr><th>#</th>{config.columns.map(col => <th key={col}>{col}</th>)}</tr></thead>
                             <tbody>
                                 {filteredData.length > 0 ? filteredData.map((item, index) => (
                                     <tr key={item._id}>
                                         <td>{index + 1}</td>
-                                        {config.columns.map(col => (
-                                            <td key={col}>{config.getValue(item, col.toLowerCase().replace(/\s+/g, '')) || 'N/A'}</td>
-                                        ))}
+                                        {config.columns.map(col => (<td key={col}>{config.getValue(item, toCamelCase(col)) || '—'}</td>))}
                                     </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan={config.columns.length + 1} style={{ textAlign: 'center', padding: 'var(--spacing-8)' }}>No matching items found.</td>
-                                    </tr>
-                                )}
+                                )) : ( <tr><td colSpan={config.columns.length + 1} className="table-empty-state-new">No items match your current filters.</td></tr> )}
                             </tbody>
                         </table>
                     </div>
@@ -201,7 +179,6 @@ const ComponentDetailModal = ({ isOpen, onClose, title, data }) => {
         </div>
     );
 };
-
 
 const useCountUp = (target, duration = 1000) => {
     const [count, setCount] = useState(0);
@@ -262,23 +239,15 @@ const AdminDashboard = () => {
                 api.get('/dashboard/stats'),
                 api.get(`/inventory?_t=${new Date().getTime()}`)
             ]);
-
             const inventoryData = inventoryResponse.data;
             const componentCounts = inventoryData.reduce((acc, item) => {
                 const type = item.componentType || 'Other';
                 acc[type] = (acc[type] || 0) + 1;
                 return acc;
             }, {});
-            
             setInventory(inventoryData);
-
-            setStats({
-                ...statsResponse.data,
-                totalAssets: inventoryData.length,
-                componentCounts,
-            });
+            setStats({ ...statsResponse.data, totalAssets: inventoryData.length, componentCounts });
             setLastUpdate(new Date());
-
         } catch (err) {
             console.error("Failed to fetch initial dashboard data:", err);
             setError('Failed to load dashboard data');
@@ -298,29 +267,18 @@ const AdminDashboard = () => {
                     api.get('/dashboard/live-updates'),
                     api.get(`/inventory?_t=${new Date().getTime()}`)
                 ]);
-                
                 const liveData = liveUpdatesResponse.data;
                 const inventoryData = inventoryResponse.data;
-                
                 setInventory(inventoryData);
-
                 const componentCounts = inventoryData.reduce((acc, item) => {
                   const type = item.componentType || 'Other';
                   acc[type] = (acc[type] || 0) + 1;
                   return acc;
                 }, {});
-
-                setStats(prev => ({
-                    ...prev,
-                    ...liveData,
-                    totalAssets: inventoryData.length,
-                    componentCounts: componentCounts,
-                }));
+                setStats(prev => ({ ...prev, ...liveData, totalAssets: inventoryData.length, componentCounts: componentCounts }));
                 setLastUpdate(new Date());
-
             } catch (err) { console.error("Live update failed:", err); }
         };
-
         const interval = setInterval(updateLiveStats, 10000);
         return () => clearInterval(interval);
     }, []);
@@ -339,86 +297,79 @@ const AdminDashboard = () => {
     const { totalUsers = 0, assetCategories = {}, openTickets = 0, totalAllocations = 0, totalAssets = 0, closedTickets = 0, pendingTickets = 0, totalTickets = 0, systemHealth = { uptime: 0 }, componentCounts = {} } = stats;
 
     return (
-        <>
-            <div className="dashboard-page-container">
-                <div className="dashboard-content-wrapper">
-                    <div className="dashboard-header">
-                        <div className="dashboard-header-content">
-                            <div className="dashboard-title-section">
-                                <h1 className="dashboard-main-title">Dashboard Overview</h1>
-                                <p className="dashboard-subtitle">Live IT Management Dashboard</p>
-                                <div className="dashboard-last-update">Last updated: {lastUpdate.toLocaleTimeString()}</div>
+        // ===== FIX: The React Fragment <> is replaced with the main container div =====
+        <div className="dashboard-page-container">
+            <div className="dashboard-content-wrapper">
+                <div className="dashboard-header">
+                    <div className="dashboard-header-content">
+                        <div className="dashboard-title-section">
+                            <h1 className="dashboard-main-title">Dashboard Overview</h1>
+                            <p className="dashboard-subtitle">Live IT Management Dashboard</p>
+                            <div className="dashboard-last-update">Last updated: {lastUpdate.toLocaleTimeString()}</div>
+                        </div>
+                        <div className="dashboard-stats">
+                            <div className="dashboard-stat-item"><div className="dashboard-stat-number">{totalUsers}</div><div className="dashboard-stat-label">Total Users</div></div>
+                            <div className="dashboard-stat-item"><div className="dashboard-stat-number">{openTickets}</div><div className="dashboard-stat-label">Open Tickets</div></div>
+                            <div className="dashboard-stat-item"><div className="dashboard-stat-number">{totalAllocations}</div><div className="dashboard-stat-label">Allocations</div></div>
+                            <div className="dashboard-stat-item"><div className="dashboard-stat-number">{totalAssets}</div><div className="dashboard-stat-label">Total Assets</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div className="dashboard-kpi-section">
+                    <div className="dashboard-stats-grid"><div className="dashboard-stats-horizontal">
+                        <DashboardStatsCard title="Total Users" count={totalUsers} icon={<GroupIcon />} className="total-users" path="/users" subtitle="Active users in system" />
+                        <DashboardStatsCard title="Open Tickets" count={openTickets} icon={<AssessmentIcon />} className="open-tickets" path="/tickets?status=Open" subtitle="Tickets requiring attention" />
+                        <DashboardStatsCard title="Total Allocations" count={totalAllocations} icon={<AssignmentTurnedInIcon />} className="total-allocations" path="/allocations" subtitle="Asset assignments" />
+                    </div></div>
+                    <div className="dashboard-stats-grid"><div className="dashboard-stats-horizontal">
+                        <DashboardStatsCard title="Total Assets" count={totalAssets} icon={<InventoryIcon />} className="total-assets" path="/inventory" subtitle="All inventory items" />
+                        <DashboardStatsCard title="Closed Tickets" count={closedTickets} icon={<CheckCircleIcon />} className="closed-tickets" path="/tickets?status=Closed" subtitle="Resolved issues" />
+                        <DashboardStatsCard title="Pending Tickets" count={pendingTickets} icon={<WarningIcon />} className="pending-tickets" path="/tickets?status=In Progress" subtitle="Awaiting review" />
+                    </div></div>
+                    {Object.keys(assetCategories).length > 0 && (<div className="dashboard-stats-grid"><div className="dashboard-stats-horizontal">
+                        {Object.entries(assetCategories).map(([category, count]) => (<DashboardStatsCard key={category} title={`${category} Assets`} count={count} icon={category.toLowerCase().includes('computer') ? <ComputerIcon /> : category.toLowerCase().includes('phone') ? <PhoneIcon /> : category.toLowerCase().includes('tablet') ? <TabletIcon /> : <InventoryIcon />} className={`asset-category-${category.toLowerCase().replace(/\s+/g, '-')}`} subtitle={`${category} category`} />))}
+                    </div></div>)}
+                </div>
+                <div className="dashboard-content-section">
+                    <div className="dashboard-info-card-wrapper">
+                        <div className="dashboard-info-card-header"><h3 className="dashboard-info-card-title">📊 System Overview</h3></div>
+                        <div className="dashboard-info-card-content">
+                            <div className="system-metrics">
+                                <div className="metric-item"><span className="metric-label">Total Tickets:</span><span className="metric-value">{totalTickets}</span></div>
+                                <div className="metric-item"><span className="metric-label">Resolution Rate:</span><span className="metric-value">{totalTickets ? Math.round((closedTickets / totalTickets) * 100) : 0}%</span></div>
+                                <div className="metric-item"><span className="metric-label">System Uptime:</span><span className="metric-value">{Math.round(systemHealth.uptime / 3600)}h</span></div>
                             </div>
-                            <div className="dashboard-stats">
-                                <div className="dashboard-stat-item"><div className="dashboard-stat-number">{totalUsers}</div><div className="dashboard-stat-label">Total Users</div></div>
-                                <div className="dashboard-stat-item"><div className="dashboard-stat-number">{openTickets}</div><div className="dashboard-stat-label">Open Tickets</div></div>
-                                <div className="dashboard-stat-item"><div className="dashboard-stat-number">{totalAllocations}</div><div className="dashboard-stat-label">Allocations</div></div>
-                                <div className="dashboard-stat-item"><div className="dashboard-stat-number">{totalAssets}</div><div className="dashboard-stat-label">Total Assets</div></div>
+                            <div className="dashboard-quick-actions">
+                                <button className="dashboard-quick-action-btn" onClick={() => navigate('/tickets')}>View Tickets</button>
+                                <button className="dashboard-quick-action-btn secondary" onClick={() => navigate('/inventory')}>Manage Inventory</button>
+                                <button className="dashboard-quick-action-btn" style={{ background: '#2563eb', color: 'white' }} onClick={() => navigate('/admin/manage-data')}>Manage Data</button>
+                                <button className="dashboard-quick-action-btn success" onClick={() => navigate('/users')}>User Management</button>
                             </div>
                         </div>
                     </div>
-                    <div className="dashboard-kpi-section">
-                        <div className="dashboard-stats-grid"><div className="dashboard-stats-horizontal">
-                            <DashboardStatsCard title="Total Users" count={totalUsers} icon={<GroupIcon />} className="total-users" path="/users" subtitle="Active users in system" />
-                            <DashboardStatsCard title="Open Tickets" count={openTickets} icon={<AssessmentIcon />} className="open-tickets" path="/tickets?status=Open" subtitle="Tickets requiring attention" />
-                            <DashboardStatsCard title="Total Allocations" count={totalAllocations} icon={<AssignmentTurnedInIcon />} className="total-allocations" path="/allocations" subtitle="Asset assignments" />
-                        </div></div>
-                        <div className="dashboard-stats-grid"><div className="dashboard-stats-horizontal">
-                            <DashboardStatsCard title="Total Assets" count={totalAssets} icon={<InventoryIcon />} className="total-assets" path="/inventory" subtitle="All inventory items" />
-                            <DashboardStatsCard title="Closed Tickets" count={closedTickets} icon={<CheckCircleIcon />} className="closed-tickets" path="/tickets?status=Closed" subtitle="Resolved issues" />
-                            <DashboardStatsCard title="Pending Tickets" count={pendingTickets} icon={<WarningIcon />} className="pending-tickets" path="/tickets?status=In Progress" subtitle="Awaiting review" />
-                        </div></div>
-                        {Object.keys(assetCategories).length > 0 && (<div className="dashboard-stats-grid"><div className="dashboard-stats-horizontal">
-                            {Object.entries(assetCategories).map(([category, count]) => (<DashboardStatsCard key={category} title={`${category} Assets`} count={count} icon={category.toLowerCase().includes('computer') ? <ComputerIcon /> : category.toLowerCase().includes('phone') ? <PhoneIcon /> : category.toLowerCase().includes('tablet') ? <TabletIcon /> : <InventoryIcon />} className={`asset-category-${category.toLowerCase().replace(/\s+/g, '-')}`} subtitle={`${category} category`} />))}
-                        </div></div>)}
-                    </div>
-                    <div className="dashboard-content-section">
-                        <div className="dashboard-info-card-wrapper">
-                            <div className="dashboard-info-card-header"><h3 className="dashboard-info-card-title">📊 System Overview</h3></div>
-                            <div className="dashboard-info-card-content">
-                                <div className="system-metrics">
-                                    <div className="metric-item"><span className="metric-label">Total Tickets:</span><span className="metric-value">{totalTickets}</span></div>
-                                    <div className="metric-item"><span className="metric-label">Resolution Rate:</span><span className="metric-value">{totalTickets ? Math.round((closedTickets / totalTickets) * 100) : 0}%</span></div>
-                                    <div className="metric-item"><span className="metric-label">System Uptime:</span><span className="metric-value">{Math.round(systemHealth.uptime / 3600)}h</span></div>
-                                </div>
-                                <div className="dashboard-quick-actions">
-                                    <button className="dashboard-quick-action-btn" onClick={() => navigate('/tickets')}>View Tickets</button>
-                                    <button className="dashboard-quick-action-btn secondary" onClick={() => navigate('/inventory')}>Manage Inventory</button>
-                                    {/* --- CHANGE: ADDED THIS NEW BUTTON --- */}
-                                    <button
-                                        className="dashboard-quick-action-btn"
-                                        style={{ background: '#2563eb', color: 'white' }}
-                                        onClick={() => navigate('/admin/manage-data')}
-                                    >
-                                        Manage Data
-                                    </button>
-                                    <button className="dashboard-quick-action-btn success" onClick={() => navigate('/users')}>User Management</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="dashboard-asset-table-wrapper">
-                            <div className="dashboard-asset-table-header"><h3 className="dashboard-asset-table-title"><CategoryIcon style={{ marginRight: '8px', verticalAlign: 'bottom' }} />Component Breakdown</h3></div>
-                            <div className="dashboard-asset-table-content">
-                                {Object.keys(componentCounts).length > 0 ? (<div className="component-breakdown-list">
-                                    {Object.entries(componentCounts).sort((a, b) => b[1] - a[1]).map(([component, count]) => (
-                                        <div key={component} className="component-item" onClick={() => handleComponentClick(component)}>
-                                            <span className="component-name">{component}</span>
-                                            <span className="component-count">{count}</span>
-                                        </div>
-                                    ))}
-                                </div>) : (<p>No component data available.</p>)}
-                            </div>
+                    <div className="dashboard-asset-table-wrapper">
+                        <div className="dashboard-asset-table-header"><h3 className="dashboard-asset-table-title"><CategoryIcon style={{ marginRight: '8px', verticalAlign: 'bottom' }} />Component Breakdown</h3></div>
+                        <div className="dashboard-asset-table-content">
+                            {Object.keys(componentCounts).length > 0 ? (<div className="component-breakdown-list">
+                                {Object.entries(componentCounts).sort((a, b) => b[1] - a[1]).map(([component, count]) => (
+                                    <div key={component} className="component-item" onClick={() => handleComponentClick(component)}>
+                                        <span className="component-name">{component}</span>
+                                        <span className="component-count">{count}</span>
+                                    </div>
+                                ))}
+                            </div>) : (<p>No component data available.</p>)}
                         </div>
                     </div>
                 </div>
             </div>
+            {/* ===== FIX: The modal is now INSIDE the main container ===== */}
             <ComponentDetailModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle} data={modalData} />
-        </>
+        </div>
     );
 };
 
-
 const EmployeeDashboard = () => {
+    // This component's structure is correct, no changes needed here.
     const [userStats, setUserStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [lastUpdate, setLastUpdate] = useState(null);
@@ -446,20 +397,11 @@ const EmployeeDashboard = () => {
         return () => clearInterval(interval);
     }, [fetchUserDashboardData]);
 
-    if (!user) {
-        return <div className="dashboard-loading"><div className="dashboard-loading-spinner"></div><div className="dashboard-loading-text">Loading user data...</div></div>;
-    }
-    if (loading) {
-        return <div className="dashboard-loading"><div className="dashboard-loading-spinner"></div><div className="dashboard-loading-text">Loading your dashboard...</div></div>;
-    }
-    if (error) {
-        return <div className="dashboard-error"><div className="dashboard-error-icon">⚠️</div><div className="dashboard-error-title">{error}</div><div className="dashboard-error-description">Please try refreshing the page.</div><button className="dashboard-quick-action-btn" onClick={fetchUserDashboardData}>Retry</button></div>;
-    }
+    if (!user) { return <div className="dashboard-loading"><div className="dashboard-loading-spinner"></div><div className="dashboard-loading-text">Loading user data...</div></div>; }
+    if (loading) { return <div className="dashboard-loading"><div className="dashboard-loading-spinner"></div><div className="dashboard-loading-text">Loading your dashboard...</div></div>; }
+    if (error) { return <div className="dashboard-error"><div className="dashboard-error-icon">⚠️</div><div className="dashboard-error-title">{error}</div><div className="dashboard-error-description">Please try refreshing the page.</div><button className="dashboard-quick-action-btn" onClick={fetchUserDashboardData}>Retry</button></div>; }
 
-    const employeeDetails = {
-        "Full Name": user.name, "Email Address": user.email, "Position": user.position,
-        "Department": user.department, "Employee Code": user.employeeCode,
-    };
+    const employeeDetails = { "Full Name": user.name, "Email Address": user.email, "Position": user.position, "Department": user.department, "Employee Code": user.employeeCode };
 
     return (
         <div className="dashboard-page-container">
@@ -480,7 +422,7 @@ const EmployeeDashboard = () => {
                 </div>
                 <div className="dashboard-kpi-section">
                     <div className="dashboard-stats-grid"><div className="dashboard-stats-horizontal">
-                        <DashboardStatsCard title="My Assets" count={userStats?.myAssets} icon={<InventoryIcon />} className="my-assets" path="/my-assets" subtitle="Assigned to you" />
+                        <DashboardStatsCard title="My Assets" count={userStats?.myAssets} icon={<InventoryIcon />} className="my-assets" path="/my-analytics" subtitle="Assigned to you" />
                         <DashboardStatsCard title="Active Tickets" count={userStats?.myOpenTickets} icon={<AssessmentIcon />} className="my-tickets" path="/tickets?status=Open" subtitle="Requiring attention" />
                         <DashboardStatsCard title="Completed Tasks" count={userStats?.myCompletedTickets} icon={<CheckCircleIcon />} className="completed-tasks" path="/tickets?status=Closed" subtitle="Successfully resolved" />
                     </div></div>

@@ -248,3 +248,234 @@
   }
   .actions-cell { justify-content: flex-end; }
 }
+/* --- START OF FILE UserListPage.css --- */
+
+/* ... (all your existing responsive UserListPage.css styles go here) ... */
+/* ... make sure the previous responsive code is already in this file ... */
+
+.user-list-table tbody tr.is-clickable {
+  cursor: pointer;
+}
+
+/* 
+ =====================================
+ === NEW: USER SNAPSHOT MODAL STYLES ===
+ =====================================
+*/
+
+.snapshot-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(10, 25, 41, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 1050; /* Higher than other modals if needed */
+  opacity: 0;
+  animation: snapshot-fade-in 0.3s forwards;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-4);
+}
+
+@keyframes snapshot-fade-in {
+  to { opacity: 1; }
+}
+
+.snapshot-modal-container {
+  background: var(--neutral-50);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-2xl);
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--neutral-200);
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  animation: snapshot-slide-in 0.4s forwards cubic-bezier(0.165, 0.84, 0.44, 1);
+  overflow: hidden;
+}
+
+@keyframes snapshot-slide-in {
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.snapshot-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-5) var(--spacing-6);
+  border-bottom: 1px solid var(--neutral-200);
+  background: white;
+  flex-shrink: 0;
+}
+
+.snapshot-modal-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--neutral-900);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.snapshot-modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--neutral-500);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: all var(--transition-base);
+}
+.snapshot-modal-close:hover {
+  color: var(--error-500);
+  transform: rotate(90deg);
+}
+
+.snapshot-modal-body {
+  padding: var(--spacing-6);
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-6);
+}
+
+.snapshot-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--neutral-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.snapshot-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.snapshot-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--neutral-200);
+}
+.snapshot-card-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--neutral-800);
+}
+.snapshot-card-header .MuiSvgIcon-root {
+  color: var(--primary-500);
+}
+
+.snapshot-card-content {
+  padding: var(--spacing-4);
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--spacing-3) 0;
+  border-bottom: 1px solid var(--neutral-100);
+  font-size: var(--font-size-base);
+}
+.detail-item:last-child {
+  border-bottom: none;
+}
+.detail-item span:first-child {
+  color: var(--neutral-600);
+  font-weight: var(--font-weight-medium);
+}
+.detail-item span:last-child {
+  color: var(--neutral-900);
+  font-weight: var(--font-weight-semibold);
+}
+
+.snapshot-card-content.is-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-4);
+  text-align: center;
+}
+
+.stat-box {
+  background: var(--neutral-100);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+}
+.stat-box.open { background-color: var(--error-100); }
+.stat-box.closed { background-color: var(--success-100); }
+
+.stat-value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--neutral-800);
+  line-height: 1;
+}
+.stat-box.open .stat-value { color: var(--error-700); }
+.stat-box.closed .stat-value { color: var(--success-700); }
+
+.stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--neutral-600);
+  font-weight: var(--font-weight-medium);
+  margin-top: var(--spacing-1);
+}
+
+.asset-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+.asset-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-3);
+  background: var(--neutral-100);
+  border-radius: var(--radius-lg);
+}
+.asset-list .asset-serial {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--neutral-500);
+  background-color: var(--neutral-200);
+  padding: 2px 6px;
+  border-radius: var(--radius-md);
+}
+
+.no-assets-message {
+  text-align: center;
+  color: var(--neutral-500);
+  padding: var(--spacing-6) 0;
+}
+
+/* Responsive adjustments for the snapshot modal */
+@media (max-width: 768px) {
+  .snapshot-grid {
+    grid-template-columns: 1fr; /* Stack cards vertically */
+  }
+}
+
+@media (max-width: 480px) {
+  .snapshot-modal-header {
+    padding: var(--spacing-4);
+  }
+  .snapshot-modal-title {
+    font-size: var(--font-size-2xl);
+  }
+  .snapshot-card-content.is-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

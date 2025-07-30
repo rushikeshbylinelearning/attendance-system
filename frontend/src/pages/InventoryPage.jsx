@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '@/services/api';
-import '../styles/InventoryPage.css';
+import '../styles/InventoryPage.css'; // This CSS file is correct
 import WarrantyStatus from '@/components/WarrantyStatus';
 
 import {
@@ -8,7 +8,6 @@ import {
   DialogActions, Button, TextField, Select, MenuItem, FormControl, InputLabel, Snackbar, Checkbox, FormControlLabel,
   Toolbar, Typography, Tooltip, IconButton, Box, CircularProgress, TableSortLabel,
   Menu, List, ListItem, ListItemText, Divider, ListItemIcon, 
-  // ✅ CSS UPDATE: Added for the search bar inside the filter
   InputAdornment
 } from '@mui/material';
 import { visuallyHidden } from '@mui/utils';
@@ -18,7 +17,7 @@ import {
     FilterList as FilterListIcon 
 } from '@mui/icons-material';
 
-// --- Configs (No changes from previous version) ---
+// --- All configs remain the same ---
 const allFormFields = [
   { id: 'componentType', label: 'Component Type', required: true, type: 'select_component' },
   { id: 'brand', label: 'Brand', required: true },
@@ -62,6 +61,7 @@ const getNestedValue = (obj, path) => {
 }
 
 function InventoryPage() {
+  // All state declarations remain the same
   const [inventory, setInventory] = useState([]);
   const [users, setUsers] = useState([]);
   const [componentTypes, setComponentTypes] = useState([]); 
@@ -74,17 +74,13 @@ function InventoryPage() {
   const [filters, setFilters] = useState({});
   const [filterMenu, setFilterMenu] = useState({ anchorEl: null, columnId: null });
   const [tempFilterValues, setTempFilterValues] = useState([]);
-  
-  // ✅ CSS UPDATE: State for the search term inside the filter menu
   const [filterSearchTerm, setFilterSearchTerm] = useState('');
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentItemData, setCurrentItemData] = useState(initialFormState);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  
   const [selectedItems, setSelectedItems] = useState([]);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [bulkUpdateDialogOpen, setBulkUpdateDialogOpen] = useState(false);
@@ -92,6 +88,7 @@ function InventoryPage() {
   const [isSelectAllPages, setIsSelectAllPages] = useState(false);
   const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
 
+  // All hooks and handlers (useEffect, useMemo, handleSave, etc.) remain exactly the same
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
@@ -126,7 +123,7 @@ function InventoryPage() {
     return searchedInventory.filter(item => {
         return activeFilterKeys.every(key => {
             const itemValue = getNestedValue(item, key);
-            return filters[key].includes(String(itemValue)); // Ensure comparison is consistent
+            return filters[key].includes(String(itemValue));
         });
     });
   }, [searchedInventory, filters]);
@@ -176,7 +173,7 @@ function InventoryPage() {
   const handleCloseFilterMenu = () => {
     setFilterMenu({ anchorEl: null, columnId: null });
     setTempFilterValues([]);
-    setFilterSearchTerm(''); // Reset search on close
+    setFilterSearchTerm('');
   };
 
   const handleTempFilterChange = (value) => {
@@ -210,20 +207,16 @@ function InventoryPage() {
     return [...new Set(values)].filter(v => v !== 'null' && v !== 'undefined' && v.trim() !== '').sort();
   }, [filterMenu.columnId, searchedInventory]);
 
-  // ✅ CSS UPDATE: Filter the options based on the internal search term
   const displayedFilterOptions = useMemo(() => {
     if (!filterSearchTerm) return allFilterOptions;
     return allFilterOptions.filter(opt => opt.toLowerCase().includes(filterSearchTerm.toLowerCase()));
   }, [allFilterOptions, filterSearchTerm]);
 
-  // ✅ CSS UPDATE: Logic for the "Select All (Visible)" checkbox
   const handleSelectAllVisible = (event) => {
     if (event.target.checked) {
-        // Add all visible options to the current selection
         const newSelected = [...new Set([...tempFilterValues, ...displayedFilterOptions])];
         setTempFilterValues(newSelected);
     } else {
-        // Remove all visible options from the current selection
         setTempFilterValues(tempFilterValues.filter(v => !displayedFilterOptions.includes(v)));
     }
   };
@@ -241,7 +234,7 @@ function InventoryPage() {
         setIsSelectionModeActive(false);
         setSelectedItems([]);
         setIsSelectAllPages(false);
-        handleCloseFilterMenu(); // Also close filter menu on escape
+        handleCloseFilterMenu();
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -420,132 +413,133 @@ function InventoryPage() {
 
   const showSelectAllFilteredBanner = isSelectionModeActive && selectedItems.length === currentItems.length && !isSelectAllPages && sortedInventory.length > itemsPerPage;
 
+  // ===== THE FIX IS HERE =====
+  // We use a single root div with the main class name.
+  // The React Fragment <> </> has been removed.
+  // All dialogs are now *inside* this main container.
   return (
-    <>
-      <div className="inventory-page-container">
-        <div className="inventory-content-wrapper">
-          <header className="inventory-list-header">
-            <h1 className="inventory-list-title">Component Inventory</h1>
-            <button className="add-item-btn" onClick={() => handleOpenDialog()}><AddIcon /> Add Item</button>
-          </header>
+    <div className="inventory-page-container">
+      <div className="inventory-content-wrapper">
+        <header className="inventory-list-header">
+          <h1 className="inventory-list-title">Component Inventory</h1>
+          <button className="add-item-btn" onClick={() => handleOpenDialog()}><AddIcon /> Add Item</button>
+        </header>
 
-          {isSelectionModeActive && selectedItems.length > 0 ? (
-            <Toolbar sx={{ pl: { sm: 2 }, pr: { xs: 1, sm: 1 }, mb: 2, borderRadius: 1, bgcolor: (theme) => alpha(theme.palette.primary.main, 0.15), flexDirection: 'column', alignItems: 'stretch', p: '0 !important' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', p: '0 8px 0 16px' }}>
-                    <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1" component="div">
-                      {isSelectAllPages ? `All ${selectedItems.length} items selected` : `${selectedItems.length} selected`}
+        {isSelectionModeActive && selectedItems.length > 0 ? (
+          <Toolbar sx={{ pl: { sm: 2 }, pr: { xs: 1, sm: 1 }, mb: 2, borderRadius: 1, bgcolor: (theme) => alpha(theme.palette.primary.main, 0.15), flexDirection: 'column', alignItems: 'stretch', p: '0 !important' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', p: '0 8px 0 16px' }}>
+                  <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1" component="div">
+                    {isSelectAllPages ? `All ${selectedItems.length} items selected` : `${selectedItems.length} selected`}
+                  </Typography>
+                  <Tooltip title="Update Selected"><IconButton onClick={() => setBulkUpdateDialogOpen(true)}><EditIcon /></IconButton></Tooltip>
+                  <Tooltip title="Delete Selected"><IconButton onClick={() => setBulkDeleteConfirmOpen(true)}><DeleteIcon /></IconButton></Tooltip>
+              </Box>
+              {showSelectAllFilteredBanner && (
+                  <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
+                    <Typography variant="body2">
+                        All {selectedItems.length} items on this page are selected.{' '}
+                        <Link component="button" variant="body2" onClick={handleSelectAllFiltered} sx={{fontWeight: 'bold'}}>
+                            Select all {sortedInventory.length} items
+                        </Link>
                     </Typography>
-                    <Tooltip title="Update Selected"><IconButton onClick={() => setBulkUpdateDialogOpen(true)}><EditIcon /></IconButton></Tooltip>
-                    <Tooltip title="Delete Selected"><IconButton onClick={() => setBulkDeleteConfirmOpen(true)}><DeleteIcon /></IconButton></Tooltip>
-                </Box>
-                {showSelectAllFilteredBanner && (
-                    <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
-                      <Typography variant="body2">
-                          All {selectedItems.length} items on this page are selected.{' '}
-                          <Link component="button" variant="body2" onClick={handleSelectAllFiltered} sx={{fontWeight: 'bold'}}>
-                              Select all {sortedInventory.length} items
-                          </Link>
-                      </Typography>
-                    </Box>
-                )}
-            </Toolbar>
-          ) : (
-            <div className="inventory-filters-container">
-              <div className="filter-input-group">
-                <SearchIcon className="filter-icon" />
-                <input type="text" className="filter-input has-icon" placeholder="Search inventory... (Ctrl+A to select)" value={searchTerm} onChange={handleSearchChange} />
-              </div>
+                  </Box>
+              )}
+          </Toolbar>
+        ) : (
+          <div className="inventory-filters-container">
+            <div className="filter-input-group">
+              <SearchIcon className="filter-icon" />
+              <input type="text" className="filter-input has-icon" placeholder="Search inventory... (Ctrl+A to select)" value={searchTerm} onChange={handleSearchChange} />
             </div>
-          )}
-          
-          {loading ? (<Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh'}}><CircularProgress /></Box>) : (
-            <>
-              <div className="inventory-table-container">
-                <table className="inventory-list-table">
-                  <thead>
-                    <tr>
-                      {isSelectionModeActive ? (
-                        <th>
-                          <Checkbox color="primary"
-                            indeterminate={!isSelectAllPages && selectedItems.length > 0 && selectedItems.length < currentItems.length}
-                            checked={isSelectAllPages || (currentItems.length > 0 && selectedItems.length === currentItems.length)}
-                            onChange={handleSelectAll} inputProps={{ 'aria-label': 'select all items on this page' }}/>
-                        </th>
-                      ) : (
-                        <th>SR. NO.</th>
-                      )}
-                      {activeDisplayColumns.map(column => (
-                        <th key={column.id}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'space-between' }}>
-                                {column.sortKey ? (
-                                    <TableSortLabel
-                                        active={sortConfig.key === column.sortKey}
-                                        direction={sortConfig.key === column.sortKey ? sortConfig.direction : 'asc'}
-                                        onClick={() => handleSortRequest(column.sortKey)}
-                                        sx={{flexGrow: 1}}
-                                    >
-                                        {column.label}
-                                        {sortConfig.key === column.sortKey ? <Box component="span" sx={visuallyHidden}>{sortConfig.direction === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box> : null}
-                                    </TableSortLabel>
-                                ) : (
-                                    <span>{column.label}</span>
-                                )}
-                                {column.filterKey && (
-                                    <Tooltip title="Filter">
-                                        <IconButton size="small" onClick={(e) => handleOpenFilterMenu(e, column)}>
-                                            <FilterListIcon fontSize="inherit" color={filters[column.filterKey]?.length > 0 ? 'primary' : 'inherit'} />
-                                        </IconButton>
-                                    </Tooltip>
-                                )}
-                            </Box>
-                        </th>
-                      ))}
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentItems.map((item, index) => {
-                      const isItemSelected = selectedItems.indexOf(item._id) !== -1;
-                      return (
-                        <tr key={item._id} role="checkbox" aria-checked={isItemSelected} tabIndex={-1} selected={isItemSelected}>
-                          {isSelectionModeActive ? (
-                            <td>
-                              <Checkbox color="primary" checked={isItemSelected} onChange={(event) => handleSelectOne(event, item._id)}
-                                inputProps={{ 'aria-labelledby': `inventory-table-checkbox-${index}` }}/>
-                            </td>
-                          ) : (
-                            <td data-label="SR. NO.">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                          )}
-                          {activeDisplayColumns.map(column => (
-                            <td key={column.id} data-label={column.label}>
-                                {renderCellContent(item, column.id)}
-                            </td>
-                          ))}
-                          <td data-label="Actions" className="actions-cell">
-                            <button className="action-btn edit" onClick={() => handleOpenDialog(item)}><EditIcon fontSize="small" /></button>
-                            <button className="action-btn delete" onClick={() => { setItemToDelete(item); setDeleteConfirmOpen(true); }}><DeleteIcon fontSize="small" /></button>
+          </div>
+        )}
+        
+        {loading ? (<Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh'}}><CircularProgress /></Box>) : (
+          <>
+            <div className="inventory-table-container">
+              <table className="inventory-list-table">
+                <thead>
+                  <tr>
+                    {isSelectionModeActive ? (
+                      <th>
+                        <Checkbox color="primary"
+                          indeterminate={!isSelectAllPages && selectedItems.length > 0 && selectedItems.length < currentItems.length}
+                          checked={isSelectAllPages || (currentItems.length > 0 && selectedItems.length === currentItems.length)}
+                          onChange={handleSelectAll} inputProps={{ 'aria-label': 'select all items on this page' }}/>
+                      </th>
+                    ) : (
+                      <th>SR. NO.</th>
+                    )}
+                    {activeDisplayColumns.map(column => (
+                      <th key={column.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'space-between' }}>
+                              {column.sortKey ? (
+                                  <TableSortLabel
+                                      active={sortConfig.key === column.sortKey}
+                                      direction={sortConfig.key === column.sortKey ? sortConfig.direction : 'asc'}
+                                      onClick={() => handleSortRequest(column.sortKey)}
+                                      sx={{flexGrow: 1}}
+                                  >
+                                      {column.label}
+                                      {sortConfig.key === column.sortKey ? <Box component="span" sx={visuallyHidden}>{sortConfig.direction === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box> : null}
+                                  </TableSortLabel>
+                              ) : (
+                                  <span>{column.label}</span>
+                              )}
+                              {column.filterKey && (
+                                  <Tooltip title="Filter">
+                                      <IconButton size="small" onClick={(e) => handleOpenFilterMenu(e, column)}>
+                                          <FilterListIcon fontSize="inherit" color={filters[column.filterKey]?.length > 0 ? 'primary' : 'inherit'} />
+                                      </IconButton>
+                                  </Tooltip>
+                              )}
+                          </Box>
+                      </th>
+                    ))}
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentItems.map((item, index) => {
+                    const isItemSelected = selectedItems.indexOf(item._id) !== -1;
+                    return (
+                      <tr key={item._id} role="checkbox" aria-checked={isItemSelected} tabIndex={-1} selected={isItemSelected}>
+                        {isSelectionModeActive ? (
+                          <td>
+                            <Checkbox color="primary" checked={isItemSelected} onChange={(event) => handleSelectOne(event, item._id)}
+                              inputProps={{ 'aria-labelledby': `inventory-table-checkbox-${index}` }}/>
                           </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <Stack alignItems="center" sx={{ padding: 'var(--spacing-6)' }}>
-                <Pagination count={Math.ceil(sortedInventory.length / itemsPerPage)} page={currentPage} onChange={handlePageChange} />
-              </Stack>
-            </>
-          )}
-        </div>
+                        ) : (
+                          <td data-label="SR. NO.">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                        )}
+                        {activeDisplayColumns.map(column => (
+                          <td key={column.id} data-label={column.label}>
+                              {renderCellContent(item, column.id)}
+                          </td>
+                        ))}
+                        <td data-label="Actions" className="actions-cell">
+                          <button className="action-btn edit" onClick={() => handleOpenDialog(item)}><EditIcon fontSize="small" /></button>
+                          <button className="action-btn delete" onClick={() => { setItemToDelete(item); setDeleteConfirmOpen(true); }}><DeleteIcon fontSize="small" /></button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <Stack alignItems="center" sx={{ padding: 'var(--spacing-6)' }}>
+              <Pagination count={Math.ceil(sortedInventory.length / itemsPerPage)} page={currentPage} onChange={handlePageChange} />
+            </Stack>
+          </>
+        )}
       </div>
       
-      {/* ✅ CSS UPDATE: The entire filter menu is revamped for better UI/UX */}
       <Menu
         anchorEl={filterMenu.anchorEl}
         open={Boolean(filterMenu.anchorEl)}
         onClose={handleCloseFilterMenu}
         MenuListProps={{ 'aria-labelledby': 'filter-menu' }}
-        PaperProps={{ sx: { width: 320, } }} // Set a fixed width
+        PaperProps={{ sx: { width: 320, } }}
       >
         <Box sx={{ px: 2, py: 1 }}>
             <TextField
@@ -593,7 +587,6 @@ function InventoryPage() {
         </Box>
       </Menu>
 
-      {/* --- All other Dialogs and Snackbars remain unchanged --- */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>{isEditMode ? 'Update Inventory Item' : 'Add New Item'}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 2, pt: '10px !important' }}>
@@ -663,7 +656,7 @@ function InventoryPage() {
       </Dialog>
 
       <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })}><Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity}>{snackbar.message}</Alert></Snackbar>
-    </>
+    </div>
   );
 }
 

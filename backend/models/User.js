@@ -10,7 +10,13 @@ const UserSchema = new mongoose.Schema({
     type: String,
     enum: ['admin', 'user', 'intern', 'employee'],
     default: 'user'
+  },
+  domain: {
+    type: String,
+    trim: true,
+    default: null 
   }
 }, { timestamps: true });
+
 
 module.exports = mongoose.model('User', UserSchema);

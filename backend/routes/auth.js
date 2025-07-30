@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('../models/User'); // Make sure this User model is correct
 const router = express.Router();
 
 // POST /api/auth/register
@@ -16,19 +16,20 @@ router.post('/register', async (req, res) => {
         let user = await User.findOne({ email });
         if (user) return res.status(400).json({ msg: 'User already exists' });
 
-        // 🔐 Hash the password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
         const newUser_data = {
             name,
             email,
-            password: hashedPassword, // ✅ Store hashed password
+            password: hashedPassword,
             employeecode
         };
 
         if (seatNumber) newUser_data.seatNumber = seatNumber;
-        if (role && ['admin', 'technician', 'employee'].includes(role)) {
+        
+        // ✅ CHANGE #1: Allow 'intern' to be a valid role during registration
+        if (role && ['admin', 'technician', 'employee', 'intern'].includes(role)) {
             newUser_data.role = role;
         }
 
@@ -53,9 +54,10 @@ router.post('/login', async (req, res) => {
         return res.status(400).json({ msg: 'Please provide email, password, and login type.' });
     }
 
+    // ✅ CHANGE #2: Add 'intern' to the list of roles allowed for the 'employee' loginType.
     const allowedRoles = {
         admin: ['admin', 'technician'],
-        employee: ['employee']
+        employee: ['employee', 'intern'] // <--- THIS IS THE FIX
     };
 
     if (!allowedRoles[loginType]) {
@@ -73,6 +75,7 @@ router.post('/login', async (req, res) => {
 
         console.log('✅ Found user:', { role: user.role, email: user.email });
 
+        // This logic now works correctly for interns because of the change above.
         if (!allowedRoles[loginType].includes(user.role)) {
             console.warn(`⛔ Role mismatch. Tried to login as ${loginType}, but user is ${user.role}`);
             return res.status(403).json({ msg: 'Access denied for this login portal.' });

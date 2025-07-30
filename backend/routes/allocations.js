@@ -5,16 +5,18 @@ const InventoryItem = require('../models/InventoryItem');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
+// Apply auth middleware to all routes in this file
 router.use(auth);
 
+// Middleware to restrict access to Admins and Technicians
 const adminOrTechOnly = (req, res, next) => {
-    // Allowing technician as well, assuming they can manage allocations
     if (req.user.role !== 'admin' && req.user.role !== 'technician') {
         return res.status(403).json({ msg: 'Access denied. Admins or Technicians only.' });
     }
     next();
 };
 
+// Helper function to extract all non-empty serial numbers from an allocation document
 const getSerialNumbers = (doc) => {
     const serialFields = [
         'monitorSerialNo', 'kbSerialNo', 'mouseSerialNo', 'upsSerialNo',
@@ -29,10 +31,15 @@ const getSerialNumbers = (doc) => {
     return Array.from(serials);
 };
 
-// GET all allocations
+
+// @route   GET /api/allocations
+// @desc    Get all allocation records
+// @access  Private (Admin/Technician)
 router.get('/', async (req, res) => {
     try {
-        if (req.user.role === 'user') return res.json([]);
+        // Regular users should not see all allocations
+        if (req.user.role === 'employee') return res.json([]);
+        
         const allocationRecords = await Allocation.find().sort({ employeeName: 1 });
         return res.json(allocationRecords);
     } catch (err) {
@@ -41,7 +48,10 @@ router.get('/', async (req, res) => {
     }
 });
 
-// ✅ CORRECTED: POST a new allocation
+
+// @route   POST /api/allocations
+// @desc    Create a new allocation record
+// @access  Private (Admin/Technician)
 router.post('/', adminOrTechOnly, async (req, res) => {
     try {
         const { employeeId } = req.body;
@@ -76,7 +86,6 @@ router.post('/', adminOrTechOnly, async (req, res) => {
         res.status(201).json(newAllocation);
     } catch (err) {
         console.error('--- 🚨 API ERROR in POST /api/allocations: ---', err);
-        // Handle unique key violation gracefully
         if (err.code === 11000) {
             return res.status(409).json({ message: 'An allocation for this employee already exists.' });
         }
@@ -84,7 +93,10 @@ router.post('/', adminOrTechOnly, async (req, res) => {
     }
 });
 
-// ✅ CORRECTED: PUT (Update) an existing allocation
+
+// @route   PUT /api/allocations/:id
+// @desc    Update an existing allocation record
+// @access  Private (Admin/Technician)
 router.put('/:id', adminOrTechOnly, async (req, res) => {
     try {
         const { employeeId } = req.body;
@@ -96,12 +108,10 @@ router.put('/:id', adminOrTechOnly, async (req, res) => {
         if (!oldAllocation) {
             return res.status(404).json({ msg: 'Allocation not found' });
         }
-
         if (!user) {
             return res.status(404).json({ msg: 'User not found for given Employee ID' });
         }
 
-        // The logic for updating inventory status remains the same and is correct.
         const oldSerials = new Set(getSerialNumbers(oldAllocation));
         const newSerials = new Set(getSerialNumbers(req.body));
 
@@ -114,40 +124,41 @@ router.put('/:id', adminOrTechOnly, async (req, res) => {
                 { $set: { status: 'Assigned', assignedTo: user._id } }
             );
         }
-
         if (serialsToUnassign.length > 0) {
             await InventoryItem.updateMany(
                 { serialNumber: { $in: serialsToUnassign } },
-                { $set: { status: 'Unassigned' }, $unset: { assignedTo: "" } } // More robust unassignment
+                { $set: { status: 'Unassigned' }, $unset: { assignedTo: "" } }
             );
         }
 
-        // --- THIS IS THE FIX ---
-        // Instead of passing the whole body, we build a precise update payload.
-        // This uses $set for fields with values and $unset for fields that are now empty.
         const updatePayload = { $set: {}, $unset: {} };
-        req.body.employeeName = user.name; // ensure name is updated
+        req.body.employeeName = user.name;
 
-        for (const key in req.body) {
-            if (req.body[key] !== null && req.body[key] !== '') {
-                updatePayload.$set[key] = req.body[key];
+        // Create a set of all possible keys from both old and new data
+        const allKeys = new Set([...Object.keys(oldAllocation), ...Object.keys(req.body)]);
+
+        for (const key of allKeys) {
+            // Skip internal MongoDB fields
+            if (key === '_id' || key === '__v' || key === 'createdAt' || key === 'updatedAt') continue;
+            
+            const newValue = req.body[key];
+            if (newValue !== null && newValue !== '' && newValue !== undefined) {
+                updatePayload.$set[key] = newValue;
             } else {
-                // If the field exists in the old allocation, unset it
-                if (oldAllocation[key] !== undefined) {
+                // If the field exists in the schema and is now empty, unset it
+                if (Allocation.schema.path(key)) {
                     updatePayload.$unset[key] = "";
                 }
             }
         }
         
-        // Don't send empty operators to MongoDB
         if (Object.keys(updatePayload.$set).length === 0) delete updatePayload.$set;
         if (Object.keys(updatePayload.$unset).length === 0) delete updatePayload.$unset;
-
 
         const updatedAllocation = await Allocation.findByIdAndUpdate(
             req.params.id, 
             updatePayload, 
-            { new: true }
+            { new: true, runValidators: true }
         );
         
         res.json(updatedAllocation);
@@ -158,42 +169,27 @@ router.put('/:id', adminOrTechOnly, async (req, res) => {
 });
 
 
-// DELETE an allocation
-// DELETE Allocation and reset inventory items to 'Unassigned'
-router.delete('/:id', async (req, res) => {
+// @route   DELETE /api/allocations/:id
+// @desc    Delete an allocation and unassign associated inventory
+// @access  Private (Admin/Technician)
+router.delete('/:id', adminOrTechOnly, async (req, res) => {
   try {
     const allocation = await Allocation.findById(req.params.id);
     if (!allocation) {
       return res.status(404).json({ msg: 'Allocation not found' });
     }
 
-    const serialFields = [
-      { field: 'monitorSerialNo', type: 'Monitor' },
-      { field: 'laptopSerialNo', type: 'Laptop' },
-      { field: 'cpuSerialNo', type: 'CPU' },
-      { field: 'kbSerialNo', type: 'Keyboard' },
-      { field: 'mouseSerialNo', type: 'Mouse' },
-      { field: 'upsSerialNo', type: 'UPS' },
-      { field: 'penTabSn', type: 'Pen Tab' },
-      { field: 'headphoneSn', type: 'Headphone' }
-    ];
+    const serialsToUnassign = getSerialNumbers(allocation);
 
-    for (const { field, type } of serialFields) {
-      const serial = allocation[field];
-      if (serial) {
-        const updated = await InventoryItem.findOneAndUpdate(
-          { serialNumber: serial, componentType: type },
-          { status: 'Unassigned', assignedTo: null },
-          { new: true }
+    if (serialsToUnassign.length > 0) {
+        await InventoryItem.updateMany(
+            { serialNumber: { $in: serialsToUnassign } },
+            { $set: { status: 'Unassigned' }, $unset: { assignedTo: "" } }
         );
-        if (!updated) {
-          console.warn(`Inventory item not found or not updated for ${type} with S/N ${serial}`);
-        }
-      }
     }
-
+    
     await Allocation.findByIdAndDelete(req.params.id);
-    res.json({ msg: 'Allocation and associated inventory unlinked' });
+    res.json({ msg: 'Allocation deleted and associated inventory unlinked' });
   } catch (err) {
     console.error('Error deleting allocation and resetting inventory:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -201,22 +197,58 @@ router.delete('/:id', async (req, res) => {
 });
 
 
-// GET logged-in user's assets
+// @route   GET /api/allocations/my-assets
+// @desc    Get the logged-in user's allocated assets
+// @access  Private (All authenticated users)
 router.get('/my-assets', async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ msg: 'User not found' });
 
-        const allocation = await Allocation.findOne({ employeeId: user.employeeId });
+        const allocation = await Allocation.findOne({ user: user._id }); // Search by user ObjectId
         if (!allocation) {
-            // It's not an error if a user has no assets, just return an empty object
-            return res.json({}); 
+            return res.json({}); // Not an error, just no assets allocated
         }
-
         res.json(allocation);
     } catch (err) {
-        console.error('Error fetching allocations for user:', err);
+        console.error('Error fetching my-assets:', err);
         res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+
+// --- THIS IS THE CORRECTED ROUTE FOR THE USER SNAPSHOT MODAL ---
+// @route   GET /api/allocations/user/:userId
+// @desc    Get all assets for a specific user from their flat allocation document
+// @access  Private (Admin/Technician)
+router.get('/user/:userId', adminOrTechOnly, async (req, res) => {
+    try {
+        const allocation = await Allocation.findOne({ user: req.params.userId });
+
+        // If no allocation document exists for the user, return an empty array.
+        // This is expected and correct behavior.
+        if (!allocation) {
+            return res.json([]);
+        }
+        
+        // The frontend expects an array of asset objects. We manually build this array
+        // from the fields in the single, flat allocation document.
+        const allocatedAssets = [];
+        
+        if (allocation.monitorMake) allocatedAssets.push({ _id: 'monitor', componentId: { name: allocation.monitorMake, serialNumber: allocation.monitorSerialNo } });
+        if (allocation.keyboardMake) allocatedAssets.push({ _id: 'keyboard', componentId: { name: allocation.keyboardMake, serialNumber: allocation.kbSerialNo } });
+        if (allocation.mouseMake) allocatedAssets.push({ _id: 'mouse', componentId: { name: allocation.mouseMake, serialNumber: allocation.mouseSerialNo } });
+        if (allocation.cpuBox) allocatedAssets.push({ _id: 'cpu', componentId: { name: allocation.cpuBox, serialNumber: allocation.cpuSerialNo } });
+        if (allocation.upsMake) allocatedAssets.push({ _id: 'ups', componentId: { name: allocation.upsMake, serialNumber: allocation.upsSerialNo } });
+        if (allocation.penTabMake) allocatedAssets.push({ _id: 'pentab', componentId: { name: allocation.penTabMake, serialNumber: allocation.penTabSn } });
+        if (allocation.headphoneMake) allocatedAssets.push({ _id: 'headphone', componentId: { name: allocation.headphoneMake, serialNumber: allocation.headphoneSn } });
+        if (allocation.laptopMake) allocatedAssets.push({ _id: 'laptop', componentId: { name: allocation.laptopMake, serialNumber: allocation.laptopSerialNo } });
+
+        res.json(allocatedAssets);
+
+    } catch (err) {
+        console.error("Error in GET /api/allocations/user/:userId :", err.message);
+        res.status(500).json({ msg: 'Server Error' });
     }
 });
 

@@ -1,0 +1,250 @@
+/* MyAnalyticsPage.css - Professional design adapted from AllocationPage */
+
+/* ===== MAIN CONTAINER ===== */
+.analytics-page-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: var(--spacing-6);
+  background: linear-gradient(135deg, var(--neutral-50) 0%, var(--primary-50) 50%, var(--secondary-50) 100%);
+  position: relative;
+  overflow-y: auto;
+}
+
+.analytics-page-container::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 20%, var(--primary-100) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, var(--secondary-100) 0%, transparent 50%);
+  opacity: 0.4;
+  z-index: 0;
+  animation: backgroundFloat 20s ease-in-out infinite alternate;
+}
+
+@keyframes backgroundFloat {
+  0% { transform: scale(1) rotate(0deg); }
+  100% { transform: scale(1.05) rotate(1deg); }
+}
+
+/* ===== CONTENT WRAPPER ===== */
+.analytics-content-wrapper {
+  width: 100%;
+  max-width: var(--container-max-width, 1400px);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-2xl);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  animation: fadeInScale 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ===== PAGE HEADER ===== */
+.analytics-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-5) var(--spacing-6);
+  background: var(--gradient-neutral);
+  border-bottom: 1px solid var(--neutral-200);
+}
+
+.analytics-list-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: white;
+  margin: 0;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* ===== MAIN GRID LAYOUT ===== */
+.analytics-grid-container {
+  padding: var(--spacing-6);
+  display: grid;
+  gap: var(--spacing-6);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .analytics-grid-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kpi-grid {
+    grid-column: 1 / -1; /* Make KPI cards span both columns */
+  }
+}
+
+.kpi-grid {
+  display: grid;
+  gap: var(--spacing-5);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+/* ===== KPI STATS CARD STYLING ===== */
+.stats-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-5);
+  background-color: #fff;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--neutral-200);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
+}
+.stats-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.stats-card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+.stats-card-icon .MuiSvgIcon-root {
+  font-size: 2rem;
+}
+
+.stats-card-value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--neutral-800);
+  margin: 0;
+}
+.stats-card-title {
+  font-size: var(--font-size-sm);
+  color: var(--neutral-600);
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+/* Card Color Variants */
+.stats-card.color-blue .stats-card-icon { background-color: #e0e7ff; color: #4338ca; }
+.stats-card.color-orange .stats-card-icon { background-color: #ffedd5; color: #c2410c; }
+.stats-card.color-green .stats-card-icon { background-color: #dcfce7; color: #166534; }
+.stats-card.color-purple .stats-card-icon { background-color: #f3e8ff; color: #7e22ce; }
+
+/* ===== ANALYTICS SECTION CARD (for Chart and Logs) ===== */
+.analytics-section-card {
+  background-color: #fff;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--neutral-200);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.analytics-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4) var(--spacing-5);
+  border-bottom: 1px solid var(--neutral-200);
+}
+.analytics-section-header h2 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--neutral-800);
+  margin: 0;
+}
+.analytics-section-header .MuiSvgIcon-root {
+  color: var(--neutral-500);
+}
+.analytics-section-content {
+  padding: var(--spacing-5);
+}
+
+/* ===== ACTIVITY LOG STYLING ===== */
+.activity-log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+}
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+.activity-icon-wrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.activity-icon-wrapper .MuiSvgIcon-root { font-size: 1.25rem; }
+
+/* Activity Type Colors */
+.type-ticket_created .activity-icon-wrapper { background-color: #e0e7ff; color: #4338ca; }
+.type-ticket_resolved .activity-icon-wrapper { background-color: #dcfce7; color: #166534; }
+.type-asset_assigned .activity-icon-wrapper { background-color: #f3e8ff; color: #7e22ce; }
+.type-comment_added .activity-icon-wrapper { background-color: #e0f2fe; color: #0284c7; }
+
+.activity-description {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--neutral-700);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.activity-timestamp {
+  margin: 4px 0 0 0;
+  font-size: 0.8rem;
+  color: var(--neutral-500);
+}
+
+/* ===== LOADING & EMPTY STATES ===== */
+.analytics-feedback-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-16);
+  min-height: 50vh;
+}
+.analytics-page-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-6);
+}
+.analytics-page-spinner {
+  width: 50px; height: 50px;
+  border: 4px solid var(--neutral-200);
+  border-top: 4px solid var(--primary-600);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+.analytics-page-loading-text {
+  color: var(--neutral-600);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

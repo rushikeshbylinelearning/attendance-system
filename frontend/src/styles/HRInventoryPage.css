@@ -416,3 +416,51 @@
   background: var(--neutral-100);
   border-color: var(--neutral-400);
 }
+/* Add this to HRInventoryPage.css */
+
+.notification {
+  position: fixed;
+  top: 29px; /* Adjust based on your AppBar height */
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--spacing-4) var(--spacing-6);
+  border-radius: var(--radius-lg);
+  color: white;
+  font-weight: var(--font-weight-semibold);
+  z-index: 2000;
+  box-shadow: var(--shadow-xl);
+  animation: slideInDown 0.5s ease-out;
+}
+
+.notification.success {
+  background-color: var(--success-500);
+}
+
+.notification.error {
+  background-color: var(--error-500);
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.feedback-message {
+    text-align: center;
+    padding: var(--spacing-12) var(--spacing-6);
+    color: var(--neutral-500);
+    font-size: var(--font-size-lg);
+}
+.feedback-message.error {
+    background-color: var(--error-50);
+    color: var(--error-700);
+    border: 1px solid var(--error-200);
+    border-radius: var(--radius-lg);
+    margin: var(--spacing-6);
+}

@@ -15,7 +15,7 @@ import {
   Collapse
 } from '@mui/material';
 
-// Icons for sidebar
+// Icons
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ComputerIcon from '@mui/icons-material/Computer';
@@ -34,16 +34,13 @@ const Layout = () => {
   const location = useLocation();
 
   const [inventoryOpen, setInventoryOpen] = useState(false);
-
   const user = JSON.parse(sessionStorage.getItem('user'));
   const userRole = user ? user.role : null;
 
-  // ✅ CHANGED: This effect now handles both opening AND closing the menu
-  // It synchronizes the dropdown's state with the current URL path.
   useEffect(() => {
     const isActive = location.pathname.startsWith('/inventory') || location.pathname.startsWith('/robotics-inventory');
     setInventoryOpen(isActive);
-  }, [location.pathname]); // The effect re-runs every time the path changes
+  }, [location.pathname]);
 
   const handleLogout = () => {
     sessionStorage.removeItem('token');
@@ -51,8 +48,10 @@ const Layout = () => {
     navigate('/login');
   };
 
+  // ✅ --- THIS IS THE FIX ---
+  // Add 'intern' to the roles array for shared pages.
   const allMenuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard', roles: ['admin', 'technician', 'employee'] },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard', roles: ['admin', 'technician', 'employee', 'intern'] },
     { 
       text: 'Inventory', 
       icon: <InventoryIcon />, 
@@ -64,28 +63,25 @@ const Layout = () => {
     },
     { text: 'Allocations', icon: <ComputerIcon />, path: '/allocations', roles: ['admin', 'technician'] },
     { text: 'Users', icon: <GroupIcon />, path: '/users', roles: ['admin'] },
-    { text: 'Tickets', icon: <ConfirmationNumberIcon />, path: '/tickets', roles: ['admin', 'technician', 'employee'] },
+    { text: 'Tickets', icon: <ConfirmationNumberIcon />, path: '/tickets', roles: ['admin', 'technician', 'employee', 'intern'] },
     { text: 'Inquiries', icon: <HelpOutlineIcon />, path: '/inquiries', roles: ['admin'] },
     { text: 'HR', icon: <GroupIcon />, path: '/hr', roles: ['admin', 'technician'] },
   ];
+  // ✅ --- END OF FIX ---
+
 
   const visibleMenuItems = allMenuItems.filter(item => userRole && item.roles.includes(userRole));
   
-  // This click handler is now primarily for manual toggling when not on an inventory page.
   const handleInventoryToggle = () => {
       setInventoryOpen(!inventoryOpen);
   }
 
+  // ... The rest of your component remains the same
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* AppBar (No changes here) */}
       <AppBar
         position="fixed"
-        sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          backgroundColor: 'background.paper',
-          color: 'text.primary'
-        }}
+        sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, backgroundColor: 'background.paper', color: 'text.primary' }}
         elevation={1}
       >
         <Toolbar>
@@ -97,25 +93,18 @@ const Layout = () => {
           </Button>
         </Toolbar>
       </AppBar>
-
-      {/* Sidebar Drawer */}
       <Drawer
         variant="permanent"
         sx={{
           width: drawerWidth,
           flexShrink: 0,
-          [`& .MuiDrawer-paper`]: {
-            width: drawerWidth,
-            boxSizing: 'border-box',
-            borderRight: 'none'
-          },
+          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box', borderRight: 'none' },
         }}
       >
         <Toolbar />
         <Box sx={{ overflow: 'auto', p: 1 }}>
           <List>
             {visibleMenuItems.map((item) => {
-              // If the item has sub-items, render a collapsible menu
               if (item.subItems) {
                 return (
                   <React.Fragment key={item.text}>
@@ -126,7 +115,7 @@ const Layout = () => {
                     </ListItemButton>
                     <Collapse in={inventoryOpen} timeout="auto" unmountOnExit>
                       <List component="div" disablePadding>
-                        {item.subItems.filter(sub => sub.roles.includes(userRole)).map((subItem) => ( // Also filter sub-items by role
+                        {item.subItems.filter(sub => sub.roles.includes(userRole)).map((subItem) => (
                           <ListItemButton
                             key={subItem.text}
                             onClick={() => navigate(subItem.path)}
@@ -142,13 +131,10 @@ const Layout = () => {
                   </React.Fragment>
                 );
               }
-              
-              // Otherwise, render a normal menu item
               return (
                 <ListItem key={item.text} disablePadding>
                   <ListItemButton
                     onClick={() => navigate(item.path)}
-                    // Use strict equality for Allocations to avoid conflict with Inventory path
                     selected={item.path === '/allocations' ? location.pathname === item.path : location.pathname.startsWith(item.path)}
                     sx={{ borderRadius: 1, mb: 0.5 }}
                   >
@@ -161,17 +147,9 @@ const Layout = () => {
           </List>
         </Box>
       </Drawer>
-
-      {/* Main Content (No changes here) */}
       <Box
         component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          backgroundColor: 'background.default',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
+        sx={{ flexGrow: 1, p: 3, backgroundColor: 'background.default', display: 'flex', flexDirection: 'column' }}
       >
         <Toolbar />
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
